@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Point — Beautiful screenshots, instantly</title>
+  <meta name="description" content="A tiny, tactile screenshot and annotation tool made for macOS.">
+  <meta name="theme-color" content="#f5f6fa">
+  <meta property="og:title" content="Point — Beautiful screenshots, instantly">
+  <meta property="og:description" content="Capture, annotate, and frame polished screenshots without leaving the moment.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://201549bl.github.io/point/">
+  <meta property="og:image" content="https://201549bl.github.io/point/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Point — Beautiful screenshots, instantly">
+  <meta name="twitter:description" content="A tiny, tactile screenshot and annotation tool made for macOS.">
+  <meta name="twitter:image" content="https://201549bl.github.io/point/og.png">
+  <link rel="icon" href="app-icon.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17171b;
+      --muted: #666773;
+      --line: rgba(29, 29, 36, .1);
+      --accent: #7b54dc;
+      --accent-dark: #633ac8;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 16% 3%, rgba(206, 185, 255, .38), transparent 32rem),
+        radial-gradient(circle at 86% 32%, rgba(165, 219, 255, .35), transparent 31rem),
+        #f7f8fb;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+
+    .shell {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    nav {
+      height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      text-decoration: none;
+    }
+
+    .brand img { width: 38px; height: 38px; }
+
+    .nav-link {
+      color: #51515c;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 78px 0 54px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border: 1px solid rgba(107, 73, 190, .14);
+      border-radius: 99px;
+      color: #6845bd;
+      background: rgba(255, 255, 255, .65);
+      box-shadow: 0 4px 24px rgba(80, 55, 140, .08);
+      font-size: 13px;
+      font-weight: 650;
+      backdrop-filter: blur(18px);
+    }
+
+    .eyebrow::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #8e68e7;
+      content: "";
+      box-shadow: 0 0 0 4px rgba(142, 104, 231, .13);
+    }
+
+    h1 {
+      max-width: 850px;
+      margin: 24px auto 20px;
+      font-size: clamp(52px, 8vw, 86px);
+      line-height: .96;
+      letter-spacing: -.067em;
+      text-wrap: balance;
+    }
+
+    .lede {
+      max-width: 620px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: clamp(18px, 2.2vw, 22px);
+      line-height: 1.5;
+      letter-spacing: -.015em;
+      text-wrap: balance;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .button {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 19px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: #3c3c46;
+      background: rgba(255, 255, 255, .74);
+      box-shadow: 0 7px 26px rgba(34, 30, 50, .07);
+      font-size: 15px;
+      font-weight: 650;
+      text-decoration: none;
+      backdrop-filter: blur(18px);
+      transition: transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .2s ease;
+    }
+
+    .button:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(34, 30, 50, .12); }
+    .button:focus-visible { outline: 3px solid rgba(123, 84, 220, .25); outline-offset: 3px; }
+
+    .button.primary {
+      border-color: transparent;
+      color: white;
+      background: linear-gradient(180deg, #8c68e3, var(--accent-dark));
+      box-shadow: 0 12px 32px rgba(99, 58, 200, .3), inset 0 1px rgba(255, 255, 255, .35);
+    }
+
+    .demo-wrap { padding: 30px 0 88px; }
+
+    .demo {
+      position: relative;
+      min-height: 630px;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .68);
+      border-radius: 34px;
+      background:
+        linear-gradient(145deg, rgba(44, 142, 197, .18), rgba(129, 99, 201, .16)),
+        radial-gradient(circle at 15% 74%, #afd8e5 0, #649bc2 26%, transparent 27%),
+        linear-gradient(135deg, #6ec0dc, #3a79ae 47%, #8f7dc7);
+      box-shadow: 0 35px 90px rgba(39, 49, 91, .18), inset 0 1px rgba(255, 255, 255, .7);
+    }
+
+    .demo::before,
+    .demo::after {
+      position: absolute;
+      bottom: -90px;
+      width: 540px;
+      height: 310px;
+      border-radius: 56% 44% 0 0;
+      content: "";
+      filter: saturate(.75);
+    }
+
+    .demo::before { left: -90px; background: #718b91; transform: rotate(8deg); }
+    .demo::after { right: -150px; background: #566b72; transform: rotate(-7deg); }
+
+    .glass-frame {
+      position: relative;
+      z-index: 1;
+      width: min(78%, 790px);
+      padding: 13px;
+      border: 1px solid rgba(255, 255, 255, .82);
+      border-radius: 29px;
+      background: linear-gradient(140deg, rgba(255, 255, 255, .66), rgba(206, 181, 255, .42) 46%, rgba(255, 255, 255, .36));
+      box-shadow: 0 28px 60px rgba(21, 31, 63, .34), inset 0 0 0 1px rgba(126, 75, 207, .32);
+      backdrop-filter: blur(24px) saturate(1.25);
+    }
+
+    .shot {
+      position: relative;
+      min-height: 375px;
+      overflow: hidden;
+      border-radius: 17px;
+      color: #f7f7fa;
+      background: #17171b;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .shot-bar {
+      height: 49px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 17px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      color: #aaaab3;
+      font-size: 12px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #55555d; }
+    .shot-title { margin-left: 8px; }
+
+    .shot-content { padding: 58px 58px 72px; }
+    .shot-label { color: #9a7be9; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .shot h2 { max-width: 470px; margin: 10px 0 14px; font-size: clamp(30px, 4vw, 46px); line-height: 1.04; letter-spacing: -.045em; }
+    .shot p { max-width: 410px; margin: 0; color: #a9a9b2; line-height: 1.55; }
+
+    .annotation {
+      position: absolute;
+      right: 12%;
+      bottom: 23%;
+      width: 150px;
+      height: 5px;
+      border-radius: 9px;
+      background: #ac7cff;
+      box-shadow: 0 0 0 2px rgba(0,0,0,.32);
+      transform: rotate(-22deg);
+      transform-origin: right center;
+    }
+
+    .annotation::after {
+      position: absolute;
+      right: -3px;
+      top: -8px;
+      width: 17px;
+      height: 17px;
+      border-top: 5px solid #ac7cff;
+      border-right: 5px solid #ac7cff;
+      content: "";
+      transform: rotate(45deg);
+    }
+
+    .toolbar {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      bottom: 42px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 7px;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 17px;
+      background: rgba(246, 246, 250, .68);
+      box-shadow: 0 16px 36px rgba(22, 30, 58, .22), inset 0 1px rgba(255,255,255,.8);
+      backdrop-filter: blur(24px) saturate(1.2);
+      transform: translateX(-50%);
+    }
+
+    .tool {
+      width: 36px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: #4d4c56;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .tool.active { color: white; background: linear-gradient(#926de8, #7148ce); box-shadow: inset 0 1px rgba(255,255,255,.35); }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      padding-bottom: 120px;
+    }
+
+    .feature {
+      padding: 25px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .55);
+      box-shadow: 0 14px 45px rgba(36, 32, 54, .05);
+      backdrop-filter: blur(16px);
+    }
+
+    .feature-kicker { color: var(--accent); font-size: 12px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+    .feature h3 { margin: 10px 0 7px; font-size: 20px; letter-spacing: -.025em; }
+    .feature p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 27px 0 38px;
+      border-top: 1px solid var(--line);
+      color: #757681;
+      font-size: 13px;
+    }
+
+    footer a { text-decoration: none; }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 24px, 1120px); }
+      .hero { padding-top: 54px; }
+      h1 { font-size: clamp(48px, 15vw, 68px); }
+      .demo { min-height: 500px; border-radius: 26px; }
+      .glass-frame { width: 91%; padding: 9px; border-radius: 23px; }
+      .shot { min-height: 330px; border-radius: 14px; }
+      .shot-content { padding: 44px 30px 70px; }
+      .shot p { font-size: 14px; }
+      .annotation { right: 8%; bottom: 20%; width: 105px; }
+      .features { grid-template-columns: 1fr; padding-bottom: 70px; }
+      footer { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .button { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <nav aria-label="Primary navigation">
+      <a class="brand" href="#top"><img src="app-icon.png" alt=""> Point</a>
+      <a class="nav-link" href="https://github.com/201549BL/point">View on GitHub ↗</a>
+    </nav>
+
+    <main id="top">
+      <section class="hero">
+        <span class="eyebrow">Made for macOS</span>
+        <h1>Beautiful screenshots, instantly.</h1>
+        <p class="lede">Point is a tiny, tactile screenshot tool for capturing, annotating, and framing the moment—without breaking your flow.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/201549BL/point/releases/latest/download/Point-0.1.0-macOS.zip">Download for macOS&nbsp; ↓</a>
+          <a class="button" href="https://github.com/201549BL/point">Source on GitHub&nbsp; ↗</a>
+        </div>
+      </section>
+
+      <section class="demo-wrap" aria-label="Point screenshot annotation preview">
+        <div class="demo">
+          <div class="glass-frame">
+            <div class="shot">
+              <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="shot-title">A screenshot, ready to share</span></div>
+              <div class="shot-content">
+                <span class="shot-label">Point for Mac</span>
+                <h2>Capture the idea. Keep the context.</h2>
+                <p>Add an arrow, hide a detail, or reveal your desktop backdrop. Then copy it and move on.</p>
+              </div>
+              <span class="annotation" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="toolbar" aria-hidden="true">
+            <span class="tool active">↗</span><span class="tool">A</span><span class="tool">▦</span><span class="tool">■</span><span class="tool">⌘</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="features" aria-label="Features">
+        <article class="feature">
+          <span class="feature-kicker">Fast</span>
+          <h3>Three fingers. Two taps.</h3>
+          <p>Start a capture straight from the trackpad, or use your own global keyboard shortcut.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-kicker">Focused</span>
+          <h3>Only the tools you need.</h3>
+          <p>Arrows, text, mosaic blur, redaction, and a clipboard-first workflow that stays out of the way.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-kicker">Personal</span>
+          <h3>Your desktop, beautifully framed.</h3>
+          <p>Use your wallpaper as a private backdrop with a customizable glass border—never neighboring windows.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <span>Point is free and built for macOS 14 or later.</span>
+      <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
+    </footer>
+  </div>
+</body>
+</html>
