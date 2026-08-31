@@ -293,8 +293,6 @@
       border: 1px solid transparent;
       border-radius: 17px;
       color: #4d4c56;
-      font-size: 14px;
-      font-weight: 750;
     }
 
     .tool.active {
@@ -336,8 +334,15 @@
       display: grid;
       place-items: center;
       color: #47464f;
-      font-size: 14px;
-      font-weight: 650;
+    }
+
+    .symbol {
+      width: 17px;
+      height: 17px;
+      display: block;
+      background: currentColor;
+      -webkit-mask: var(--icon) center / contain no-repeat;
+      mask: var(--icon) center / contain no-repeat;
     }
 
     .copy-action {
@@ -438,13 +443,21 @@
             </div>
           </div>
           <div class="toolbar" aria-hidden="true">
-            <span class="tool-picker"><span class="tool active">↗</span><span class="tool">▦</span><span class="tool">■</span></span>
+            <span class="tool-picker">
+              <span class="tool active"><span class="symbol" style="--icon: url('icons/arrow-up-right.png')"></span></span>
+              <span class="tool"><span class="symbol" style="--icon: url('icons/square-grid-3x3-fill.png')"></span></span>
+              <span class="tool"><span class="symbol" style="--icon: url('icons/rectangle-fill.png')"></span></span>
+            </span>
             <span class="toolbar-divider"></span>
-            <span class="toolbar-action">↶</span><span class="toolbar-action">↷</span>
+            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/arrow-uturn-backward.png')"></span></span>
+            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/arrow-uturn-forward.png')"></span></span>
             <span class="toolbar-divider"></span>
-            <span class="toolbar-label">Backdrop</span><span class="switch"></span><span class="toolbar-action">☷</span>
+            <span class="toolbar-label">Backdrop</span><span class="switch"></span>
+            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/slider-horizontal-3.png')"></span></span>
             <span class="toolbar-divider"></span>
-            <span class="toolbar-action">⚙</span><span class="toolbar-action">⇩</span><span class="copy-action">Copy</span>
+            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/gearshape.png')"></span></span>
+            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/square-and-arrow-down.png')"></span></span>
+            <span class="copy-action">Copy</span>
           </div>
         </div>
       </section>
