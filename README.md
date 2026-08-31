@@ -29,9 +29,6 @@ Applications folder. Point requires macOS 14 or later.
 On the first capture, macOS asks for Screen Recording access. Point uses this
 permission only to capture the region you select.
 
-> Public release downloads are coming soon. Builds produced locally with an
-> Apple Development certificate are not suitable for redistribution.
-
 ## Use Point
 
 Press the configured shortcut, use the optional three-finger double-tap, or
