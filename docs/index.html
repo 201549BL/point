@@ -179,12 +179,6 @@
         radial-gradient(circle at 15% 74%, #afd8e5 0, #649bc2 26%, transparent 27%),
         linear-gradient(135deg, #6ec0dc, #3a79ae 47%, #8f7dc7);
       box-shadow: 0 35px 90px rgba(39, 49, 91, .18), inset 0 1px rgba(255, 255, 255, .7);
-      transition: background .5s cubic-bezier(.2, .8, .2, 1), box-shadow .5s ease;
-    }
-
-    .demo.backdrop-off {
-      background: rgba(232, 234, 241, .72);
-      box-shadow: 0 24px 70px rgba(39, 49, 91, .1), inset 0 1px rgba(255, 255, 255, .8);
     }
 
     .demo::before,
@@ -196,12 +190,10 @@
       border-radius: 56% 44% 0 0;
       content: "";
       filter: saturate(.75);
-      transition: opacity .38s ease;
     }
 
     .demo::before { left: -90px; background: #718b91; transform: rotate(8deg); }
     .demo::after { right: -150px; background: #566b72; transform: rotate(-7deg); }
-    .demo.backdrop-off::before, .demo.backdrop-off::after { opacity: 0; }
 
     .glass-frame {
       position: relative;
@@ -213,42 +205,16 @@
       background: linear-gradient(140deg, rgba(255, 255, 255, .66), rgba(206, 181, 255, .42) 46%, rgba(255, 255, 255, .36));
       box-shadow: 0 28px 60px rgba(21, 31, 63, .34), inset 0 0 0 1px rgba(126, 75, 207, .32);
       backdrop-filter: blur(24px) saturate(1.25);
-      transition: width .48s cubic-bezier(.2, .86, .25, 1), padding .48s cubic-bezier(.2, .86, .25, 1);
     }
-
-    .backdrop-off .glass-frame { width: min(88%, 900px); }
 
     .shot {
       position: relative;
+      min-height: 375px;
       overflow: hidden;
-      aspect-ratio: 1833 / 862;
       border-radius: 17px;
       color: #f7f7fa;
       background: #17171b;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
-      cursor: crosshair;
-      touch-action: none;
-    }
-
-    .shot canvas { width: 100%; height: 100%; display: block; }
-
-    .demo-hint {
-      position: absolute;
-      z-index: 3;
-      top: 24px;
-      left: 50%;
-      padding: 8px 13px;
-      border: 1px solid rgba(255,255,255,.6);
-      border-radius: 99px;
-      color: rgba(28, 30, 38, .7);
-      background: rgba(255,255,255,.6);
-      box-shadow: 0 8px 24px rgba(31, 36, 62, .1);
-      font-size: 12px;
-      font-weight: 650;
-      backdrop-filter: blur(18px);
-      transform: translateX(-50%);
-      white-space: nowrap;
-      pointer-events: none;
     }
 
     .shot-bar {
@@ -363,11 +329,7 @@
       background: white;
       box-shadow: 0 1px 3px rgba(30, 25, 45, .25);
       content: "";
-      transition: margin .22s cubic-bezier(.2,.8,.2,1);
     }
-
-    .switch.off { background: rgba(76, 75, 83, .24); }
-    .switch.off::after { margin-left: 0; }
 
     .toolbar-action {
       width: 24px;
@@ -377,17 +339,6 @@
       font-size: 14px;
       font-weight: 650;
     }
-
-    .toolbar button {
-      margin: 0;
-      padding: 0;
-      border: 0;
-      font: inherit;
-      cursor: pointer;
-    }
-
-    .toolbar button:focus-visible { outline: 2px solid rgba(113, 72, 206, .5); outline-offset: 2px; }
-    .toolbar-action:hover, .tool:hover { background-color: rgba(255,255,255,.45); }
 
     .copy-action {
       min-width: 49px;
@@ -401,28 +352,6 @@
       font-size: 12px;
       font-weight: 700;
     }
-
-    .demo-toast {
-      position: absolute;
-      z-index: 5;
-      left: 50%;
-      bottom: 112px;
-      padding: 9px 14px;
-      border: 1px solid rgba(255,255,255,.68);
-      border-radius: 99px;
-      color: #34323a;
-      background: rgba(248,248,251,.8);
-      box-shadow: 0 12px 30px rgba(23,29,52,.18);
-      font-size: 12px;
-      font-weight: 650;
-      opacity: 0;
-      backdrop-filter: blur(20px);
-      transform: translate(-50%, 8px);
-      transition: opacity .2s ease, transform .25s cubic-bezier(.2,.8,.2,1);
-      pointer-events: none;
-    }
-
-    .demo-toast.visible { opacity: 1; transform: translate(-50%, 0); }
 
     .features {
       display: grid;
@@ -462,7 +391,7 @@
       h1 { font-size: clamp(48px, 15vw, 68px); }
       .demo { min-height: 500px; border-radius: 26px; }
       .glass-frame { width: 91%; padding: 9px; border-radius: 23px; }
-      .shot { border-radius: 14px; }
+      .shot { min-height: 330px; border-radius: 14px; }
       .shot-content { padding: 44px 30px 70px; }
       .shot p { font-size: 14px; }
       .annotation { right: 8%; bottom: 20%; width: 105px; }
@@ -499,20 +428,24 @@
         <div class="demo">
           <div class="glass-frame">
             <div class="shot">
-              <canvas id="demo-canvas" aria-label="Interactive screenshot annotation canvas"></canvas>
+              <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="shot-title">A screenshot, ready to share</span></div>
+              <div class="shot-content">
+                <span class="shot-label">Point for Mac</span>
+                <h2>Capture the idea. Keep the context.</h2>
+                <p>Add an arrow, hide a detail, or reveal your desktop backdrop. Then copy it and move on.</p>
+              </div>
+              <span class="annotation" aria-hidden="true"></span>
             </div>
           </div>
-          <span class="demo-hint">Pick a tool, then drag on the screenshot</span>
-          <div class="toolbar" role="toolbar" aria-label="Point demo tools">
-            <span class="tool-picker"><button class="tool active" type="button" data-tool="arrow" aria-label="Arrow" aria-pressed="true">↗</button><button class="tool" type="button" data-tool="mosaic" aria-label="Mosaic blur" aria-pressed="false">▦</button><button class="tool" type="button" data-tool="redaction" aria-label="Redaction" aria-pressed="false">■</button></span>
+          <div class="toolbar" aria-hidden="true">
+            <span class="tool-picker"><span class="tool active">↗</span><span class="tool">▦</span><span class="tool">■</span></span>
             <span class="toolbar-divider"></span>
-            <button class="toolbar-action" id="demo-undo" type="button" aria-label="Undo">↶</button><button class="toolbar-action" id="demo-redo" type="button" aria-label="Redo">↷</button>
+            <span class="toolbar-action">↶</span><span class="toolbar-action">↷</span>
             <span class="toolbar-divider"></span>
-            <span class="toolbar-label">Backdrop</span><button class="switch" id="demo-backdrop" type="button" aria-label="Toggle backdrop" aria-pressed="true"></button><button class="toolbar-action" id="demo-adjust" type="button" aria-label="Adjustments">☷</button>
+            <span class="toolbar-label">Backdrop</span><span class="switch"></span><span class="toolbar-action">☷</span>
             <span class="toolbar-divider"></span>
-            <button class="toolbar-action" id="demo-reset" type="button" aria-label="Reset demo">⚙</button><button class="toolbar-action" id="demo-save" type="button" aria-label="Save image">⇩</button><button class="copy-action" id="demo-copy" type="button">Copy</button>
+            <span class="toolbar-action">⚙</span><span class="toolbar-action">⇩</span><span class="copy-action">Copy</span>
           </div>
-          <span class="demo-toast" id="demo-toast" role="status"></span>
         </div>
       </section>
 
@@ -540,204 +473,5 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
-  <script>
-    (() => {
-      const canvas = document.querySelector('#demo-canvas');
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      const source = document.createElement('canvas');
-      const sourceContext = source.getContext('2d', { willReadFrequently: true });
-      const demo = document.querySelector('.demo');
-      const toast = document.querySelector('#demo-toast');
-      const image = new Image();
-      let tool = 'arrow';
-      let active = null;
-      let annotations = [];
-      let redoStack = [];
-      let toastTimer;
-
-      const showToast = message => {
-        toast.textContent = message;
-        toast.classList.add('visible');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('visible'), 1500);
-      };
-
-      const pointForEvent = event => {
-        const rect = canvas.getBoundingClientRect();
-        return {
-          x: (event.clientX - rect.left) * canvas.width / rect.width,
-          y: (event.clientY - rect.top) * canvas.height / rect.height
-        };
-      };
-
-      const arrowPath = annotation => {
-        const { start, end } = annotation;
-        const angle = Math.atan2(end.y - start.y, end.x - start.x);
-        const head = 28;
-        context.beginPath();
-        context.moveTo(start.x, start.y);
-        context.lineTo(end.x, end.y);
-        context.moveTo(end.x - head * Math.cos(angle - Math.PI / 7), end.y - head * Math.sin(angle - Math.PI / 7));
-        context.lineTo(end.x, end.y);
-        context.lineTo(end.x - head * Math.cos(angle + Math.PI / 7), end.y - head * Math.sin(angle + Math.PI / 7));
-      };
-
-      const drawArrow = annotation => {
-        context.save();
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        arrowPath(annotation);
-        context.strokeStyle = 'rgba(0,0,0,.68)';
-        context.lineWidth = 13;
-        context.stroke();
-        arrowPath(annotation);
-        context.strokeStyle = '#9b63ee';
-        context.lineWidth = 7;
-        context.stroke();
-        context.restore();
-      };
-
-      const seeded = value => {
-        const x = Math.sin(value * 999.17 + 41.3) * 43758.5453;
-        return x - Math.floor(x);
-      };
-
-      const drawMosaic = annotation => {
-        const left = Math.floor(Math.min(annotation.start.x, annotation.end.x));
-        const top = Math.floor(Math.min(annotation.start.y, annotation.end.y));
-        const right = Math.ceil(Math.max(annotation.start.x, annotation.end.x));
-        const bottom = Math.ceil(Math.max(annotation.start.y, annotation.end.y));
-        const size = 34;
-        const cols = Math.ceil((right - left) / size);
-        const rows = Math.ceil((bottom - top) / size);
-        const vertex = (column, row) => ({
-          x: left + column * size + (column === 0 || column === cols ? 0 : (seeded(column * 31 + row * 17 + annotation.seed) - .5) * 13),
-          y: top + row * size + (row === 0 || row === rows ? 0 : (seeded(column * 19 + row * 43 + annotation.seed) - .5) * 13)
-        });
-        context.save();
-        context.beginPath();
-        context.rect(left, top, right - left, bottom - top);
-        context.clip();
-        for (let row = 0; row < rows; row++) {
-          for (let column = 0; column < cols; column++) {
-            const points = [vertex(column, row), vertex(column + 1, row), vertex(column + 1, row + 1), vertex(column, row + 1)];
-            const sampleX = Math.max(0, Math.min(source.width - 1, Math.round(points.reduce((sum, p) => sum + p.x, 0) / 4)));
-            const sampleY = Math.max(0, Math.min(source.height - 1, Math.round(points.reduce((sum, p) => sum + p.y, 0) / 4)));
-            const color = sourceContext.getImageData(sampleX, sampleY, 1, 1).data;
-            context.beginPath();
-            context.moveTo(points[0].x, points[0].y);
-            points.slice(1).forEach(point => context.lineTo(point.x, point.y));
-            context.closePath();
-            context.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-            context.strokeStyle = context.fillStyle;
-            context.lineWidth = 2;
-            context.fill();
-            context.stroke();
-          }
-        }
-        context.restore();
-      };
-
-      const drawRedaction = annotation => {
-        const x = Math.min(annotation.start.x, annotation.end.x);
-        const y = Math.min(annotation.start.y, annotation.end.y);
-        context.fillStyle = '#0b0b0d';
-        context.fillRect(x, y, Math.abs(annotation.end.x - annotation.start.x), Math.abs(annotation.end.y - annotation.start.y));
-      };
-
-      const redraw = () => {
-        if (!image.complete || !canvas.width) return;
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(source, 0, 0);
-        [...annotations, ...(active ? [active] : [])].forEach(annotation => {
-          if (annotation.tool === 'arrow') drawArrow(annotation);
-          if (annotation.tool === 'mosaic') drawMosaic(annotation);
-          if (annotation.tool === 'redaction') drawRedaction(annotation);
-        });
-      };
-
-      image.addEventListener('load', () => {
-        canvas.width = source.width = image.naturalWidth;
-        canvas.height = source.height = image.naturalHeight;
-        sourceContext.drawImage(image, 0, 0);
-        redraw();
-      });
-      image.src = 'demo-screenshot.png';
-
-      canvas.addEventListener('pointerdown', event => {
-        const start = pointForEvent(event);
-        active = { tool, start, end: start, seed: Date.now() % 10000 };
-        canvas.setPointerCapture(event.pointerId);
-        redraw();
-      });
-
-      canvas.addEventListener('pointermove', event => {
-        if (!active) return;
-        active.end = pointForEvent(event);
-        redraw();
-      });
-
-      const finishDrawing = event => {
-        if (!active) return;
-        active.end = pointForEvent(event);
-        if (Math.hypot(active.end.x - active.start.x, active.end.y - active.start.y) > 12) {
-          annotations.push(active);
-          redoStack = [];
-        }
-        active = null;
-        redraw();
-      };
-      canvas.addEventListener('pointerup', finishDrawing);
-      canvas.addEventListener('pointercancel', () => { active = null; redraw(); });
-
-      document.querySelectorAll('[data-tool]').forEach(button => button.addEventListener('click', () => {
-        tool = button.dataset.tool;
-        document.querySelectorAll('[data-tool]').forEach(item => {
-          const selected = item === button;
-          item.classList.toggle('active', selected);
-          item.setAttribute('aria-pressed', String(selected));
-        });
-      }));
-
-      document.querySelector('#demo-undo').addEventListener('click', () => {
-        const annotation = annotations.pop();
-        if (annotation) redoStack.push(annotation);
-        redraw();
-      });
-      document.querySelector('#demo-redo').addEventListener('click', () => {
-        const annotation = redoStack.pop();
-        if (annotation) annotations.push(annotation);
-        redraw();
-      });
-      document.querySelector('#demo-backdrop').addEventListener('click', event => {
-        const enabled = !demo.classList.toggle('backdrop-off');
-        event.currentTarget.classList.toggle('off', !enabled);
-        event.currentTarget.setAttribute('aria-pressed', String(enabled));
-      });
-      document.querySelector('#demo-adjust').addEventListener('click', () => showToast('More controls in the Mac app'));
-      document.querySelector('#demo-reset').addEventListener('click', () => {
-        annotations = [];
-        redoStack = [];
-        redraw();
-        showToast('Demo reset');
-      });
-      document.querySelector('#demo-save').addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = 'point-demo.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        showToast('Saved PNG');
-      });
-      document.querySelector('#demo-copy').addEventListener('click', async () => {
-        try {
-          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          showToast('Copied to clipboard');
-        } catch {
-          showToast('Use Save in this browser');
-        }
-      });
-    })();
-  </script>
 </body>
 </html>
