@@ -358,6 +358,50 @@
       font-weight: 700;
     }
 
+    .video-demo {
+      width: min(900px, 100%);
+      min-height: 0;
+      display: block;
+      margin: 0 auto;
+      padding: 10px;
+      border-radius: 34px;
+      background: linear-gradient(140deg, rgba(255, 255, 255, .74), rgba(210, 191, 255, .46));
+      box-shadow: 0 35px 90px rgba(39, 49, 91, .18), inset 0 1px rgba(255, 255, 255, .8);
+      backdrop-filter: blur(24px) saturate(1.2);
+    }
+
+    .video-demo::before,
+    .video-demo::after { display: none; }
+
+    .video-demo video {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 25px;
+      background: #eef0f5;
+    }
+
+    .video-toggle {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      z-index: 2;
+      min-width: 68px;
+      height: 36px;
+      padding: 0 14px;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 18px;
+      color: #34343d;
+      background: rgba(248,248,251,.74);
+      box-shadow: 0 8px 24px rgba(24,30,53,.18), inset 0 1px rgba(255,255,255,.84);
+      font: 650 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      backdrop-filter: blur(20px) saturate(1.2);
+      cursor: pointer;
+    }
+
+    .video-toggle:hover { background: rgba(255,255,255,.88); }
+    .video-toggle:focus-visible { outline: 3px solid rgba(123,84,220,.32); outline-offset: 3px; }
+
     .features {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -395,6 +439,9 @@
       .hero { padding-top: 54px; }
       h1 { font-size: clamp(48px, 15vw, 68px); }
       .demo { min-height: 500px; border-radius: 26px; }
+      .video-demo { min-height: 0; padding: 6px; border-radius: 24px; }
+      .video-demo video { border-radius: 18px; }
+      .video-toggle { right: 16px; bottom: 16px; }
       .glass-frame { width: 91%; padding: 9px; border-radius: 23px; }
       .shot { min-height: 330px; border-radius: 14px; }
       .shot-content { padding: 44px 30px 70px; }
@@ -430,35 +477,12 @@
       </section>
 
       <section class="demo-wrap" aria-label="Point screenshot annotation preview">
-        <div class="demo">
-          <div class="glass-frame">
-            <div class="shot">
-              <div class="shot-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="shot-title">A screenshot, ready to share</span></div>
-              <div class="shot-content">
-                <span class="shot-label">Point for Mac</span>
-                <h2>Capture the idea. Keep the context.</h2>
-                <p>Add an arrow, hide a detail, or reveal your desktop backdrop. Then copy it and move on.</p>
-              </div>
-              <span class="annotation" aria-hidden="true"></span>
-            </div>
-          </div>
-          <div class="toolbar" aria-hidden="true">
-            <span class="tool-picker">
-              <span class="tool active"><span class="symbol" style="--icon: url('icons/arrow-up-right.png')"></span></span>
-              <span class="tool"><span class="symbol" style="--icon: url('icons/square-grid-3x3-fill.png')"></span></span>
-              <span class="tool"><span class="symbol" style="--icon: url('icons/rectangle-fill.png')"></span></span>
-            </span>
-            <span class="toolbar-divider"></span>
-            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/arrow-uturn-backward.png')"></span></span>
-            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/arrow-uturn-forward.png')"></span></span>
-            <span class="toolbar-divider"></span>
-            <span class="toolbar-label">Backdrop</span><span class="switch"></span>
-            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/slider-horizontal-3.png')"></span></span>
-            <span class="toolbar-divider"></span>
-            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/gearshape.png')"></span></span>
-            <span class="toolbar-action"><span class="symbol" style="--icon: url('icons/square-and-arrow-down.png')"></span></span>
-            <span class="copy-action">Copy</span>
-          </div>
+        <div class="demo video-demo">
+          <video autoplay muted loop playsinline preload="metadata" poster="point-demo-poster.jpg" aria-label="Point adds a desktop backdrop, text, an arrow, mosaic blur, and redaction to a screenshot.">
+            <source src="point-demo.mp4" type="video/mp4">
+            <a href="point-demo.mp4">Watch the Point demo video</a>
+          </video>
+          <button class="video-toggle" type="button" aria-label="Pause demo video">Pause</button>
         </div>
       </section>
 
@@ -486,5 +510,24 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
+  <script>
+    const demoVideo = document.querySelector('.video-demo video');
+    const demoToggle = document.querySelector('.video-toggle');
+    const setDemoButton = () => {
+      const paused = demoVideo.paused;
+      demoToggle.textContent = paused ? 'Play' : 'Pause';
+      demoToggle.setAttribute('aria-label', `${paused ? 'Play' : 'Pause'} demo video`);
+    };
+    demoToggle?.addEventListener('click', () => {
+      if (demoVideo.paused) demoVideo.play(); else demoVideo.pause();
+    });
+    demoVideo?.addEventListener('play', setDemoButton);
+    demoVideo?.addEventListener('pause', setDemoButton);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      demoVideo?.pause();
+      demoVideo?.removeAttribute('autoplay');
+      setDemoButton();
+    }
+  </script>
 </body>
 </html>
