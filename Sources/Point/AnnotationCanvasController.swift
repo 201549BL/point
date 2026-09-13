@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class AnnotationCanvasController: NSObject {
@@ -9,11 +10,14 @@ final class AnnotationCanvasController: NSObject {
     var onSettings: (() -> Void)?
 
     private let sourceImage: CGImage
-    private let wallpaperImage: CGImage?
+    private let desktopWallpaperImage: CGImage?
+    private var background = CaptureBackground.preferred()
+    private var wallpaperImage: CGImage?
     private let canvasFrame: CGRect
     private let session = AnnotationSession()
     private var style = AnnotationStyle.preferred
     private var appearance = CaptureAppearance.preferred
+    private var backgroundLoadTask: Task<Void, Never>?
     private var panel: AnnotationPanel?
     private var canvasView: AnnotationCanvasView?
     private var frameView: AnnotationFrameView?
@@ -38,7 +42,8 @@ final class AnnotationCanvasController: NSObject {
 
     init(sourceImage: CGImage, wallpaperImage: CGImage?, canvasFrame: CGRect) {
         self.sourceImage = sourceImage
-        self.wallpaperImage = wallpaperImage
+        self.desktopWallpaperImage = wallpaperImage
+        self.wallpaperImage = CaptureBackground.preferred().image(desktop: wallpaperImage)
         self.canvasFrame = canvasFrame
         super.init()
     }
@@ -86,9 +91,16 @@ final class AnnotationCanvasController: NSObject {
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(canvas)
         presentControls(attachedTo: panel)
+        if background == .system,
+           let title = UserDefaults.standard.string(forKey: "systemWallpaperTitle"), title.hasSuffix(" (preview)"),
+           let wallpaper = SystemWallpaper.available().first(where: { $0.title == String(title.dropLast(10)) && $0.canSelect }) {
+            selectSystemWallpaper(wallpaper)
+        }
     }
 
     func dismiss() {
+        backgroundLoadTask?.cancel()
+        backgroundLoadTask = nil
         backdropAnimationTimer?.invalidate()
         backdropAnimationTimer = nil
         backdropTransition = nil
@@ -135,8 +147,12 @@ final class AnnotationCanvasController: NSObject {
             textSize: style.fontSize,
             enabled: appearance.usesDesktopBackdrop,
             margin: appearance.backdropMargin,
-            backdropAvailable: wallpaperImage != nil
+            backdropAvailable: wallpaperImage != nil,
+            background: background,
+            desktopAvailable: desktopWallpaperImage != nil
         )
+        controls.onSystemWallpaperChange = { [weak self] wallpaper in self?.selectSystemWallpaper(wallpaper) }
+        controls.onBackgroundChange = { [weak self] background in self?.selectBackground(background) }
         controls.onToolChange = { [weak self] tool in self?.canvasView?.chooseTool(tool) }
         controls.onUndo = { [weak self] in self?.canvasView?.undo() }
         controls.onRedo = { [weak self] in self?.canvasView?.redo() }
@@ -167,8 +183,80 @@ final class AnnotationCanvasController: NSObject {
         panel.addChildWindow(controlsPanel, ordered: .above)
         self.controlsPanel = controlsPanel
         controlsView = controls
+        controls.updateBackgroundPreview(wallpaperImage)
         positionControls()
         controlsPanel.orderFrontRegardless()
+    }
+
+    private func selectSystemWallpaper(_ wallpaper: SystemWallpaper) {
+        canvasView?.endCaptionEditing()
+        backgroundLoadTask?.cancel()
+        controlsView?.setBackgroundLoading(true)
+        backgroundLoadTask = Task { [weak self] in
+            do {
+                let image = try await wallpaper.resolvedImage()
+                try Task.checkCancellation()
+                guard let self, panel != nil else { return }
+                guard let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { throw CaptureError.cropFailed }
+                let destination = CaptureBackground.systemImageURL
+                try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: destination, options: .atomic)
+                UserDefaults.standard.set(wallpaper.title, forKey: "systemWallpaperTitle")
+                background = .system
+                wallpaperImage = image
+                background.remember()
+                appearance.usesDesktopBackdrop = true
+                UserDefaults.standard.set(true, forKey: "usesDesktopBackdrop")
+                controlsView?.updateBackground(.system, available: true, enabled: true)
+                updateBackdropLayout(animated: false)
+                controlsView?.setBackgroundLoading(false)
+                backgroundLoadTask = nil
+                focus()
+            } catch {
+                guard !Task.isCancelled, let self else { return }
+                controlsView?.setBackgroundLoading(false)
+                backgroundLoadTask = nil
+                onError?(error)
+            }
+        }
+    }
+
+    private func selectBackground(_ selected: CaptureBackground) {
+        backgroundLoadTask?.cancel()
+        backgroundLoadTask = nil
+        controlsView?.setBackgroundLoading(false)
+        canvasView?.endCaptionEditing()
+        var image: CGImage?
+        if selected == .custom {
+            let picker = NSOpenPanel()
+            picker.title = "Choose screenshot background"
+            picker.allowedContentTypes = [.image]
+            picker.allowsMultipleSelection = false
+            picker.canChooseDirectories = false
+            picker.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+            guard picker.runModal() == .OK, let url = picker.url else {
+                controlsView?.updateBackground(background, available: wallpaperImage != nil, enabled: appearance.usesDesktopBackdrop)
+                return
+            }
+            do {
+                image = try CaptureBackground.importImage(at: url)
+            } catch {
+                controlsView?.updateBackground(background, available: wallpaperImage != nil, enabled: appearance.usesDesktopBackdrop)
+                onError?(error)
+                return
+            }
+        } else {
+            image = selected.image(desktop: desktopWallpaperImage)
+        }
+        guard let image else { return }
+        background = selected
+        wallpaperImage = image
+        selected.remember()
+        appearance.usesDesktopBackdrop = true
+        UserDefaults.standard.set(true, forKey: "usesDesktopBackdrop")
+        controlsView?.updateBackground(selected, available: true, enabled: true)
+        updateBackdropLayout(animated: false)
+        focus()
     }
 
     private func setBackdropEnabled(_ enabled: Bool) {
@@ -199,6 +287,7 @@ final class AnnotationCanvasController: NSObject {
     }
 
     private func updateBackdropLayout(animated: Bool) {
+        controlsView?.updateBackgroundPreview(wallpaperImage)
         guard let panel, let frameView, let canvasView else { return }
         let canvasOrigin = CGPoint(
             x: panel.frame.minX + frameView.canvasRect.minX,
@@ -376,6 +465,7 @@ final class AnnotationCanvasController: NSObject {
     }
 
     private func finish(copy: Bool) {
+        guard backgroundLoadTask == nil else { return }
         guard let canvasView else { return }
         canvasView.endCaptionEditing()
         do {
@@ -466,6 +556,10 @@ final class AnnotationControlsView: NSView {
     var onTextSizeChange: ((CGFloat) -> Void)?
     var onEnabledChange: ((Bool) -> Void)?
     var onMarginChange: ((CGFloat) -> Void)?
+    var onSystemWallpaperChange: ((SystemWallpaper) -> Void)?
+    var onBackgroundChange: ((CaptureBackground) -> Void)?
+    private let backgroundPicker = BackgroundPickerButton(frame: .zero)
+    private var selectedBackground: CaptureBackground = .desktop
     private let tools: LiquidGlassToolPicker
     private let toggle = NSSwitch()
     private let adjustmentsButton = NSButton()
@@ -476,9 +570,9 @@ final class AnnotationControlsView: NSView {
     private var arrowSize: CGFloat
     private var textSize: CGFloat
     private var backdropMargin: CGFloat
-    private let backdropAvailable: Bool
+    private var backdropAvailable: Bool
 
-    init(tool: AnnotationTool, arrowSize: CGFloat, textSize: CGFloat, enabled: Bool, margin: CGFloat, backdropAvailable: Bool) {
+    init(tool: AnnotationTool, arrowSize: CGFloat, textSize: CGFloat, enabled: Bool, margin: CGFloat, backdropAvailable: Bool, background: CaptureBackground = .desktop, desktopAvailable: Bool = true) {
         tools = LiquidGlassToolPicker(selectedTool: tool)
         selectedTool = tool
         self.arrowSize = arrowSize
@@ -498,17 +592,24 @@ final class AnnotationControlsView: NSView {
         let undoButton = symbolButton("arrow.uturn.backward", label: "Undo", action: #selector(undoPressed), glass: false)
         let redoButton = symbolButton("arrow.uturn.forward", label: "Redo", action: #selector(redoPressed), glass: false)
 
-        let title = NSTextField(labelWithString: "Backdrop")
-        title.font = .systemFont(ofSize: 12, weight: .semibold)
-        title.textColor = backdropAvailable ? .labelColor : .secondaryLabelColor
-        title.setContentHuggingPriority(.required, for: .horizontal)
+        selectedBackground = background
+        backgroundPicker.title = "Background"
+        backgroundPicker.isBordered = false
+        backgroundPicker.toolTip = "Choose screenshot background"
+        NSLayoutConstraint.activate([
+            backgroundPicker.widthAnchor.constraint(equalToConstant: 142),
+            backgroundPicker.heightAnchor.constraint(equalToConstant: 34),
+        ])
+        backgroundPicker.target = self
+        backgroundPicker.action = #selector(backgroundGalleryPressed)
+        backgroundPicker.setAccessibilityLabel("Choose screenshot background")
 
         toggle.state = enabled && backdropAvailable ? .on : .off
         toggle.isEnabled = backdropAvailable
         toggle.controlSize = .small
         toggle.target = self
         toggle.action = #selector(toggleChanged)
-        toggle.setAccessibilityLabel("Desktop backdrop")
+        toggle.setAccessibilityLabel("Show screenshot background")
 
         adjustmentsButton.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "Adjustments")
         adjustmentsButton.target = self
@@ -533,7 +634,7 @@ final class AnnotationControlsView: NSView {
         copyButton.keyEquivalent = "\r"
         copyButton.setAccessibilityLabel("Copy screenshot")
 
-        let stack = NSStackView(views: [tools, divider(), undoButton, redoButton, divider(), title, toggle, adjustmentsButton, divider(), settingsButton, saveButton, copyButton])
+        let stack = NSStackView(views: [tools, divider(), undoButton, redoButton, divider(), backgroundPicker, toggle, adjustmentsButton, divider(), settingsButton, saveButton, copyButton])
         stack.orientation = .horizontal
         stack.alignment = .centerY
         stack.spacing = 10
@@ -552,7 +653,7 @@ final class AnnotationControlsView: NSView {
         updateAdjustmentsButton()
 
         if !backdropAvailable {
-            toolTip = "The current display wallpaper is unavailable."
+            toggle.toolTip = "Choose a background to enable the backdrop."
         }
     }
 
@@ -574,6 +675,53 @@ final class AnnotationControlsView: NSView {
 
     func updateTextSize(_ size: CGFloat) {
         textSize = min(48, max(10, size))
+    }
+
+    func updateBackgroundPreview(_ image: CGImage?) {
+        backgroundPicker.preview = image.map { NSImage(cgImage: $0, size: .zero) }
+    }
+
+    func setBackgroundLoading(_ loading: Bool) {
+        backgroundPicker.isLoading = loading
+        backgroundPicker.toolTip = loading ? "Loading full-resolution wallpaper…" : "Choose screenshot background"
+    }
+
+    func updateBackground(_ background: CaptureBackground, available: Bool, enabled: Bool) {
+        selectedBackground = background
+        let name = background == .system ? (UserDefaults.standard.string(forKey: "systemWallpaperTitle") ?? background.title) : background.title
+        backgroundPicker.setAccessibilityValue(name)
+        backdropAvailable = available
+        toggle.isEnabled = available
+        toggle.state = enabled && available ? .on : .off
+        updateAdjustmentsButton()
+    }
+
+    @objc private func backgroundGalleryPressed() {
+        if adjustmentsPopover?.isShown == true {
+            closeAdjustments()
+            return
+        }
+        let gallery = BackgroundGalleryView(selected: selectedBackground)
+        gallery.onSelect = { [weak self] background in
+            self?.closeAdjustments()
+            self?.onBackgroundChange?(background)
+        }
+        gallery.onWallpaper = { [weak self] wallpaper in
+            self?.closeAdjustments()
+            self?.onSystemWallpaperChange?(wallpaper)
+        }
+        gallery.onClose = { [weak self] in self?.closeAdjustments() }
+        let controller = NSViewController()
+        controller.view = gallery
+        let popover = NSPopover()
+        popover.behavior = .applicationDefined
+        popover.animates = true
+        popover.contentSize = gallery.frame.size
+        popover.contentViewController = controller
+        adjustmentsPopover = popover
+        backgroundPicker.isGalleryOpen = true
+        popover.show(relativeTo: backgroundPicker.bounds, of: backgroundPicker, preferredEdge: .minY)
+        installAdjustmentsDismissMonitors()
     }
 
     @objc private func undoPressed() { onUndo?() }
@@ -629,6 +777,7 @@ final class AnnotationControlsView: NSView {
     }
 
     private func closeAdjustments() {
+        backgroundPicker.isGalleryOpen = false
         removeAdjustmentsDismissMonitors()
         adjustmentsPopover?.performClose(nil)
         adjustmentsPopover = nil
@@ -642,7 +791,7 @@ final class AnnotationControlsView: NSView {
             guard let self else { return event }
             if event.type == .keyDown, event.keyCode == 53 {
                 closeAdjustments()
-                return event
+                return nil
             }
             let popoverWindow = adjustmentsPopover?.contentViewController?.view.window
             if event.window !== popoverWindow,
@@ -1908,6 +2057,275 @@ final class CaptionTextView: NSTextView {
     deinit {
         if let textStorageObserver {
             NotificationCenter.default.removeObserver(textStorageObserver)
+        }
+    }
+}
+
+
+/// A thumbnail gallery matching Showcase's desktop-background browser.
+@MainActor
+final class BackgroundGalleryView: NSView {
+    var onSelect: ((CaptureBackground) -> Void)?
+    var onWallpaper: ((SystemWallpaper) -> Void)?
+    var onClose: (() -> Void)?
+    private let selected: CaptureBackground
+    private let document = BackgroundGalleryDocument()
+    private var actions: [() -> Void] = []
+    private var nextY: CGFloat = 8
+    private let status = NSTextField(labelWithString: "Loading macOS wallpapers…")
+
+    init(selected: CaptureBackground) {
+        self.selected = selected
+        super.init(frame: CGRect(x: 0, y: 0, width: 600, height: 520))
+        let frost = NSVisualEffectView(frame: bounds)
+        frost.autoresizingMask = [.width, .height]
+        frost.material = .popover
+        frost.blendingMode = .behindWindow
+        frost.state = .active
+        addSubview(frost)
+        let tint = BackgroundGalleryTintView(frame: bounds)
+        tint.autoresizingMask = [.width, .height]
+        addSubview(tint)
+        let title = NSTextField(labelWithString: "Backgrounds")
+        title.font = .systemFont(ofSize: 20, weight: .semibold)
+        title.frame = CGRect(x: 24, y: 468, width: 400, height: 28)
+        addSubview(title)
+        let subtitle = NSTextField(labelWithString: "Choose a background. Your selection is remembered.")
+        subtitle.textColor = .secondaryLabelColor
+        subtitle.font = .systemFont(ofSize: 12)
+        subtitle.frame = CGRect(x: 24, y: 444, width: 470, height: 20)
+        addSubview(subtitle)
+        let done = NSButton(title: "Done", target: self, action: #selector(closePressed))
+        done.bezelStyle = .rounded
+        done.frame = CGRect(x: 504, y: 467, width: 72, height: 28)
+        addSubview(done)
+        let scroll = NSScrollView(frame: CGRect(x: 22, y: 50, width: 556, height: 380))
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.autohidesScrollers = true
+        document.frame = CGRect(x: 0, y: 0, width: 552, height: 380)
+        scroll.documentView = document
+        addSubview(scroll)
+        let choose = NSButton(title: "Choose image…", target: self, action: #selector(choosePressed))
+        choose.bezelStyle = .rounded
+        choose.frame = CGRect(x: 20, y: 12, width: 140, height: 28)
+        addSubview(choose)
+        let settings = NSButton(title: "Wallpaper Settings…", target: self, action: #selector(settingsPressed))
+        settings.bezelStyle = .rounded
+        settings.frame = CGRect(x: 406, y: 12, width: 172, height: 28)
+        addSubview(settings)
+
+        addHeading("Point backgrounds")
+        let options: [CaptureBackground] = [.desktop, .aurora, .ocean, .sunset, .custom]
+        for (index, option) in options.enumerated() {
+            let button = addTile(title: option.title, column: index % 3,
+                y: nextY + CGFloat(index / 3) * 142, selected: selected == option) { [weak self] in
+                    self?.onSelect?(option)
+                }
+            let desktop = NSScreen.main.flatMap { NSWorkspace.shared.desktopImageURL(for: $0) }
+            Task { [weak button] in
+                let image = await Task.detached(priority: .userInitiated) {
+                    option.image(desktop: desktop.flatMap { CaptureBackground.loadImage(at: $0) })
+                }.value
+                button?.preview = image.map { NSImage(cgImage: $0, size: .zero) }
+            }
+        }
+        nextY += 284
+        addHeading("macOS wallpapers")
+        status.frame = CGRect(x: 4, y: nextY, width: 530, height: 24)
+        status.textColor = .secondaryLabelColor
+        document.addSubview(status)
+        document.setFrameSize(CGSize(width: 552, height: nextY + 40))
+        Task { [weak self] in
+            let wallpapers = await Task.detached(priority: .userInitiated) { SystemWallpaper.available() }.value
+            guard let self else { return }
+            status.removeFromSuperview()
+            for (index, wallpaper) in wallpapers.enumerated() {
+                let isSelected = selected == .system && UserDefaults.standard.string(forKey: "systemWallpaperTitle") == wallpaper.title
+                let button = addTile(title: wallpaper.title, column: index % 3,
+                    y: nextY + CGFloat(index / 3) * 142, selected: isSelected) { [weak self] in
+                        self?.onWallpaper?(wallpaper)
+                    }
+                button.isEnabled = wallpaper.canSelect
+                if !wallpaper.canSelect {
+                    button.title = wallpaper.title + " · Download in Settings"
+                    button.toolTip = "Download \(wallpaper.title) in Wallpaper Settings to use the full-resolution image."
+                }
+                Task { [weak button] in
+                    let image = await Task.detached(priority: .utility) {
+                        if wallpaper.url.pathExtension == "mov" { return try? wallpaper.image() }
+                        return CaptureBackground.loadImage(at: wallpaper.url, maxPixelSize: 360)
+                    }.value
+                    button?.preview = image.map { NSImage(cgImage: $0, size: .zero) }
+                }
+            }
+            if wallpapers.isEmpty {
+                status.stringValue = "No wallpapers found. Choose an image from your files."
+                document.addSubview(status)
+            }
+            document.setFrameSize(CGSize(width: 552, height: nextY + max(40, CGFloat((wallpapers.count + 2) / 3) * 142)))
+        }
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    private func addHeading(_ text: String) {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.frame = CGRect(x: 4, y: nextY, width: 530, height: 22)
+        document.addSubview(label)
+        nextY += 30
+    }
+
+    private func addTile(title: String, column: Int, y: CGFloat, selected: Bool, action: @escaping () -> Void) -> BackgroundThumbnailButton {
+        let button = BackgroundThumbnailButton(frame: CGRect(x: 4 + CGFloat(column) * 182, y: y, width: 172, height: 132))
+        button.title = title
+        button.isSelectedBackground = selected
+        button.toolTip = title
+        button.setAccessibilityLabel("Use \(title) background")
+        button.tag = actions.count
+        actions.append(action)
+        button.target = self
+        button.action = #selector(tilePressed(_:))
+        document.addSubview(button)
+        return button
+    }
+
+    @objc private func tilePressed(_ sender: NSButton) { actions[sender.tag]() }
+    @objc private func choosePressed() { onSelect?(.custom) }
+    @objc private func closePressed() { onClose?() }
+    @objc private func settingsPressed() {
+        onClose?()
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Wallpaper-Settings.extension")!)
+    }
+}
+
+private final class BackgroundGalleryDocument: NSView {
+    override var isFlipped: Bool { true }
+}
+
+final class BackgroundThumbnailButton: NSButton {
+    var preview: NSImage? { didSet { needsDisplay = true } }
+    var isSelectedBackground = false
+    override var isFlipped: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let rect = CGRect(x: 2, y: 2, width: bounds.width - 4, height: 104)
+        let shape = NSBezierPath(roundedRect: rect, xRadius: 12, yRadius: 12)
+        NSGraphicsContext.saveGraphicsState()
+        shape.addClip()
+        NSColor.quaternaryLabelColor.setFill()
+        rect.fill()
+        if let preview, preview.size.width > 0, preview.size.height > 0 {
+            let scale = max(rect.width / preview.size.width, rect.height / preview.size.height)
+            let size = CGSize(width: preview.size.width * scale, height: preview.size.height * scale)
+            preview.draw(in: CGRect(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2, width: size.width, height: size.height),
+                from: .zero, operation: .sourceOver, fraction: isHighlighted ? 0.7 : 1, respectFlipped: true, hints: nil)
+        } else {
+            NSImage(systemSymbolName: "photo", accessibilityDescription: nil)?.draw(in: CGRect(x: rect.midX - 14, y: rect.midY - 12, width: 28, height: 24))
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        (isSelectedBackground ? NSColor.controlAccentColor : NSColor.separatorColor).setStroke()
+        shape.lineWidth = isSelectedBackground ? 3 : 1
+        shape.stroke()
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        (title as NSString).draw(in: CGRect(x: 3, y: 113, width: bounds.width - 6, height: 18), withAttributes: [
+            .font: NSFont.systemFont(ofSize: 12, weight: isSelectedBackground ? .semibold : .regular),
+            .foregroundColor: NSColor.labelColor,
+            .paragraphStyle: paragraph,
+        ])
+    }
+}
+
+
+private final class BackgroundGalleryTintView: NSView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.windowBackgroundColor.withAlphaComponent(0.18).setFill()
+        bounds.fill()
+    }
+}
+
+
+/// A quiet toolbar control with a live swatch, rather than a standard form button.
+final class BackgroundPickerButton: NSButton {
+    var preview: NSImage? { didSet { needsDisplay = true } }
+    var isGalleryOpen = false { didSet { needsDisplay = true } }
+    var isLoading = false {
+        didSet {
+            isLoading ? spinner.startAnimation(nil) : spinner.stopAnimation(nil)
+            needsDisplay = true
+        }
+    }
+    private var isHovered = false
+    private let spinner = NSProgressIndicator()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        focusRingType = .exterior
+        spinner.style = .spinning
+        spinner.controlSize = .small
+        spinner.isDisplayedWhenStopped = false
+        addSubview(spinner)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override var intrinsicContentSize: NSSize { NSSize(width: 142, height: 34) }
+    override func layout() {
+        super.layout()
+        spinner.frame = CGRect(x: bounds.width - 24, y: bounds.midY - 7, width: 14, height: 14)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+    override func mouseEntered(with event: NSEvent) { isHovered = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { isHovered = false; needsDisplay = true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let shape = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 10, yRadius: 10)
+        if isGalleryOpen || isHighlighted {
+            NSColor.controlAccentColor.withAlphaComponent(0.14).setFill()
+        } else {
+            NSColor.labelColor.withAlphaComponent(isHovered ? 0.08 : 0.035).setFill()
+        }
+        shape.fill()
+        let swatch = CGRect(x: 5, y: bounds.midY - 12, width: 30, height: 24)
+        let clip = NSBezierPath(roundedRect: swatch, xRadius: 6, yRadius: 6)
+        NSGraphicsContext.saveGraphicsState()
+        clip.addClip()
+        NSColor.quaternaryLabelColor.setFill()
+        swatch.fill()
+        if let preview, preview.size.width > 0, preview.size.height > 0 {
+            let scale = max(swatch.width / preview.size.width, swatch.height / preview.size.height)
+            let size = CGSize(width: preview.size.width * scale, height: preview.size.height * scale)
+            preview.draw(in: CGRect(x: swatch.midX - size.width / 2, y: swatch.midY - size.height / 2, width: size.width, height: size.height))
+        } else {
+            NSImage(systemSymbolName: "photo", accessibilityDescription: nil)?.draw(in: swatch.insetBy(dx: 6, dy: 4))
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        NSColor.white.withAlphaComponent(0.25).setStroke()
+        clip.lineWidth = 0.75
+        clip.stroke()
+        ("Background" as NSString).draw(at: CGPoint(x: 42, y: bounds.midY - 7), withAttributes: [
+            .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+            .foregroundColor: NSColor.labelColor,
+        ])
+        if !isLoading {
+            let chevron = NSBezierPath()
+            let x = bounds.width - 15
+            let y = bounds.midY
+            chevron.move(to: CGPoint(x: x - 3, y: y + (isGalleryOpen ? -1.5 : 1.5)))
+            chevron.line(to: CGPoint(x: x, y: y + (isGalleryOpen ? 1.5 : -1.5)))
+            chevron.line(to: CGPoint(x: x + 3, y: y + (isGalleryOpen ? -1.5 : 1.5)))
+            chevron.lineWidth = 1.3
+            chevron.lineCapStyle = .round
+            chevron.lineJoinStyle = .round
+            NSColor.secondaryLabelColor.setStroke()
+            chevron.stroke()
         }
     }
 }

@@ -14,7 +14,8 @@ opening a separate editor.
 - An optional three-finger double-tap trackpad gesture
 - Exact native-resolution captures across Retina and mixed-scale displays
 - Arrows, captions, irregular mosaic blur, and opaque redaction
-- A desktop-wallpaper backdrop that never exposes neighboring windows
+- Screenshot backgrounds: desktop wallpaper, other locally available macOS wallpapers, built-in Aurora/Ocean/Sunset gradients, or a custom image
+- Background choice and visibility remembered across captures and launches; custom images are stored by Point
 - A customizable glass border and annotation styling
 - Moving, resizing, deleting, undo, and redo
 - Flattened clipboard output and explicit PNG saving

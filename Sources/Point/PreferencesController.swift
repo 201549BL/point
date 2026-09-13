@@ -12,7 +12,7 @@ final class PreferencesController: NSObject {
     private let borderColorWell = NSColorWell()
     private let widthSlider = NSSlider(value: 4, minValue: 2, maxValue: 12, target: nil, action: nil)
     private let fontSlider = NSSlider(value: 15, minValue: 11, maxValue: 28, target: nil, action: nil)
-    private let backdropCheckbox = NSButton(checkboxWithTitle: "Use desktop wallpaper around captures", target: nil, action: nil)
+    private let backdropCheckbox = NSButton(checkboxWithTitle: "Show selected background around captures", target: nil, action: nil)
     private let backdropMarginSlider = NSSlider(value: 48, minValue: 32, maxValue: 80, target: nil, action: nil)
     private let trackpadShortcutCheckbox = NSButton(
         checkboxWithTitle: "Three-finger double-tap to capture",
