@@ -4,6 +4,39 @@ import XCTest
 
 final class AnnotationTests: XCTestCase {
     @MainActor
+    func testBackdropHotkeyIgnoresRepeatsAndModifiedKeys() throws {
+        let context = try XCTUnwrap(CGContext(
+            data: nil, width: 20, height: 20, bitsPerComponent: 8,
+            bytesPerRow: 80, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        let canvas = AnnotationCanvasView(
+            sourceImage: try XCTUnwrap(context.makeImage()),
+            session: AnnotationSession(),
+            style: AnnotationStyle(color: .systemBlue, lineWidth: 4, fontSize: 24)
+        )
+        var toggles = 0
+        canvas.onToggleBackdrop = { toggles += 1 }
+        func press(_ modifiers: NSEvent.ModifierFlags = [], repeated: Bool = false) throws {
+            canvas.keyDown(with: try XCTUnwrap(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: modifiers,
+                timestamp: 0, windowNumber: 0, context: nil,
+                characters: "g", charactersIgnoringModifiers: "g",
+                isARepeat: repeated, keyCode: 5
+            )))
+        }
+        try press()
+        XCTAssertEqual(toggles, 1)
+        try press(repeated: true)
+        try press(.command)
+        try press(.control)
+        try press(.option)
+        XCTAssertEqual(toggles, 1)
+        try press()
+        XCTAssertEqual(toggles, 2)
+    }
+
+    @MainActor
     func testCaptionEditorInputAreaGrowsWhileTypingWrappedText() throws {
         let context = try XCTUnwrap(CGContext(
             data: nil,

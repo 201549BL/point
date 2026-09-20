@@ -164,6 +164,9 @@ final class TrackpadShortcutService {
     private var globalMonitor: Any?
     private var localMonitor: Any?
     private var contactSource: MultitouchContactSource?
+    private var recoveryTimer: Timer?
+    private var workspaceObservers: [NSObjectProtocol] = []
+    private var lastContactFrameTimestamp = ProcessInfo.processInfo.systemUptime
     private var action: (() -> Void)?
     private var detector = ThreeFingerDoubleTapDetector(
         maximumInterval: min(1.2, max(0.5, NSEvent.doubleClickInterval + 0.08))
@@ -178,7 +181,22 @@ final class TrackpadShortcutService {
         guard enabled else { return }
         self.action = action
         activeTrackpadShortcutService = self
-        contactSource = MultitouchContactSource()
+        restartContactSource()
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
+            workspaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.restartContactSource() }
+            })
+        }
+        let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self,
+                      ProcessInfo.processInfo.systemUptime - self.lastContactFrameTimestamp >= 30 else { return }
+                self.restartContactSource()
+            }
+        }
+        recoveryTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
 
         let eventMask: NSEvent.EventTypeMask = [.leftMouseDown]
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: eventMask) { [weak self] event in
@@ -190,7 +208,21 @@ final class TrackpadShortcutService {
         }
     }
 
+    private func restartContactSource() {
+        guard action != nil else { return }
+        contactSource?.stop()
+        contactSource = nil
+        resetContact()
+        detector.reset()
+        lastContactFrameTimestamp = ProcessInfo.processInfo.systemUptime
+        contactSource = MultitouchContactSource()
+    }
+
     func stop() {
+        recoveryTimer?.invalidate()
+        recoveryTimer = nil
+        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        workspaceObservers.removeAll()
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         globalMonitor = nil
@@ -204,6 +236,7 @@ final class TrackpadShortcutService {
     }
 
     fileprivate func receiveContactFrame(count fingerCount: Int, position: CGPoint?) {
+        lastContactFrameTimestamp = ProcessInfo.processInfo.systemUptime
         contactMotion.observe(fingerCount: fingerCount, position: position)
         guard fingerCount != currentFingerCount else { return }
         let timestamp = ProcessInfo.processInfo.systemUptime
@@ -252,6 +285,8 @@ final class TrackpadShortcutService {
     }
 
     deinit {
+        recoveryTimer?.invalidate()
+        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         contactSource?.stop()

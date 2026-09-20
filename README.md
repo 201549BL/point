@@ -41,6 +41,7 @@ Canvas shortcuts:
 - `A`: arrow
 - `B`: mosaic blur
 - `R`: opaque redaction
+- `G`: toggle backdrop
 - `Command-Z` / `Command-Shift-Z`: undo / redo
 - `Delete`: delete the selected annotation
 - `Return`: copy and close when not editing text

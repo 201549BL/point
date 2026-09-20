@@ -78,6 +78,10 @@ final class AnnotationCanvasController: NSObject {
         )
         canvas.frame = frameView.canvasRect
         canvas.onCopy = { [weak self] in self?.finish(copy: true) }
+        canvas.onToggleBackdrop = { [weak self] in
+            guard let self else { return }
+            self.setBackdropEnabled(!self.appearance.usesDesktopBackdrop)
+        }
         canvas.onSave = { [weak self] in self?.finish(copy: false) }
         canvas.onCancel = { [weak self] in self?.onCancel?() }
         canvas.onToolChange = { [weak self] tool in self?.controlsView?.select(tool: tool) }
@@ -262,6 +266,7 @@ final class AnnotationCanvasController: NSObject {
     private func setBackdropEnabled(_ enabled: Bool) {
         guard wallpaperImage != nil else { return }
         appearance.usesDesktopBackdrop = enabled
+        controlsView?.updateBackground(background, available: wallpaperImage != nil, enabled: enabled)
         UserDefaults.standard.set(enabled, forKey: "usesDesktopBackdrop")
         updateBackdropLayout(animated: true)
     }
@@ -610,6 +615,7 @@ final class AnnotationControlsView: NSView {
         toggle.target = self
         toggle.action = #selector(toggleChanged)
         toggle.setAccessibilityLabel("Show screenshot background")
+        toggle.toolTip = "Toggle backdrop (G)"
 
         adjustmentsButton.image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "Adjustments")
         adjustmentsButton.target = self
@@ -1267,6 +1273,7 @@ final class AnnotationFrameView: NSView {
 
 @MainActor
 final class AnnotationCanvasView: NSView {
+    var onToggleBackdrop: (() -> Void)?
     var onCopy: (() -> Void)?
     var onSave: (() -> Void)?
     var onCancel: (() -> Void)?
@@ -1543,6 +1550,8 @@ final class AnnotationCanvasView: NSView {
             case "a": setTool(.arrow)
             case "b": setTool(.blur)
             case "r": setTool(.redaction)
+            case "g" where modifiers.intersection([.control, .option, .shift]).isEmpty:
+                if !event.isARepeat { onToggleBackdrop?() }
             default: super.keyDown(with: event)
             }
         }
