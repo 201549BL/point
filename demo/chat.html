@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>billing-bugs (Channel) - Fernway</title>
+<!-- Team-chat look-alike for recording Point (no real product's logo or name). Paste (⌘V) or drop an image, then press Return. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aub: #3f0e40; --aub-top: #350d36; --aub-hover: #350d36; --side-ink: #cfc3cf; --active: #1164a3;
+    --ink: #1d1c1d; --muted: #616061; --line: #dddddd; --soft: #f8f8f8; --link: #1264a3; --green: #007a5a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: Lato, "Slack-Lato", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; font-size: 15px; line-height: 1.46668; }
+  .shell { display: grid; grid-template-rows: 44px 1fr; height: 100vh; }
+
+  /* top bar */
+  .top { display: grid; grid-template-columns: 1fr minmax(320px, 732px) 1fr; align-items: center; background: var(--aub-top); padding: 0 16px; box-shadow: 0 1px 0 rgba(255,255,255,.1); }
+  .top .nav { display: flex; gap: 14px; justify-content: flex-end; padding-right: 16px; color: rgba(255,255,255,.7); font-size: 16px; }
+  .search { height: 26px; border-radius: 6px; background: rgba(255,255,255,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); color: rgba(255,255,255,.8); font-size: 13px; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+  .me { justify-self: end; width: 26px; height: 26px; border-radius: 6px; background: #2bac76; color: #fff; font-size: 12px; font-weight: 900; display: grid; place-items: center; position: relative; }
+  .me::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 10px; height: 10px; border-radius: 50%; background: #2bac76; border: 2px solid var(--aub-top); }
+
+  .app { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
+  aside { background: var(--aub); color: var(--side-ink); overflow: auto; border-right: 1px solid rgba(255,255,255,.1); }
+  .ws { display: flex; align-items: center; justify-content: space-between; height: 50px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.1); color: #fff; font-weight: 900; font-size: 18px; }
+  .ws .new { width: 34px; height: 34px; border-radius: 50%; background: #fff; color: var(--aub); display: grid; place-items: center; font-size: 16px; }
+  .quick { padding: 10px 0 6px; }
+  .item { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 16px 0 18px; margin: 0 8px; border-radius: 6px; font-size: 15px; white-space: nowrap; }
+  .item .ic { width: 18px; text-align: center; opacity: .85; }
+  .item.bold { color: #fff; font-weight: 900; }
+  .item.on { background: var(--active); color: #fff; }
+  .group { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 16px; margin-top: 14px; font-size: 15px; }
+  .group::before { content: "▾"; font-size: 12px; opacity: .8; }
+  .pres { width: 9px; height: 9px; border-radius: 50%; background: #2bac76; flex: none; }
+  .pres.away { background: transparent; border: 1.5px solid var(--side-ink); }
+  .mini { width: 20px; height: 20px; border-radius: 4px; font-size: 10px; font-weight: 900; color: #fff; display: grid; place-items: center; flex: none; }
+
+  main { display: grid; grid-template-rows: auto auto 1fr auto auto; min-width: 0; min-height: 0; background: #fff; }
+  .chead { display: flex; align-items: center; gap: 6px; height: 49px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--line); }
+  .chead h1 { margin: 0; font-size: 18px; font-weight: 900; }
+  .chead .caret { color: var(--muted); font-size: 12px; }
+  .chead .members { margin-left: auto; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px 3px 4px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .chead .members span { width: 20px; height: 20px; border-radius: 4px; margin-right: -9px; border: 2px solid #fff; }
+  .chead .members b { margin-left: 12px; }
+  .tabs { display: flex; gap: 18px; padding: 0 20px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--muted); }
+  .tabs span { padding: 9px 0 8px; }
+  .tabs .on { color: var(--ink); box-shadow: inset 0 -2px var(--active); }
+
+  #log { overflow-y: auto; padding: 12px 0 6px; min-height: 0; }
+  .day { position: relative; text-align: center; margin: 10px 0; }
+  .day::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+  .day span { position: relative; display: inline-block; padding: 2px 16px; border: 1px solid var(--line); border-radius: 24px; background: #fff; font-size: 13px; font-weight: 700; }
+  .msg { display: grid; grid-template-columns: 36px 1fr; gap: 8px; padding: 8px 20px; }
+  .msg:hover { background: var(--soft); }
+  .msg .av { width: 36px; height: 36px; border-radius: 6px; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 14px; }
+  .msg .who { font-weight: 900; } .msg .when { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .msg .text { word-wrap: break-word; }
+  .msg .text code { font: 12px Monaco, Menlo, Consolas, monospace; background: rgba(29,28,29,.04); border: 1px solid rgba(29,28,29,.13); border-radius: 3px; padding: 2px 3px; color: #e01e5a; }
+  .msg .text .mention { background: rgba(29,155,209,.1); color: var(--link); border-radius: 3px; padding: 0 2px; }
+  .file { margin-top: 6px; display: inline-block; }
+  .file .name { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .msg img.shot { display: block; max-width: min(480px, 100%); max-height: 360px; border-radius: 8px; border: 1px solid rgba(29,28,29,.13); cursor: zoom-in; }
+  .reacts { display: flex; gap: 4px; margin-top: 4px; }
+  .react { display: inline-flex; gap: 4px; align-items: center; height: 24px; padding: 0 6px; border-radius: 24px; background: #e8f5fa; box-shadow: inset 0 0 0 1px #1d9bd1; font-size: 12px; font-weight: 700; color: var(--link); }
+  .typing { height: 20px; padding: 0 20px; color: var(--muted); font-size: 12px; }
+
+  .composer { margin: 0 20px 20px; border: 1px solid rgba(29,28,29,.3); border-radius: 8px; background: #fff; }
+  .composer:focus-within { border-color: rgba(29,28,29,.5); box-shadow: 0 0 0 1px rgba(29,28,29,.1); }
+  .fmt { display: flex; gap: 2px; padding: 4px 6px; border-radius: 8px 8px 0 0; background: #f8f8f8; color: rgba(29,28,29,.55); font-size: 14px; }
+  .fmt span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 4px; }
+  .fmt i.sep { width: 1px; height: 20px; margin: 4px 4px; background: rgba(29,28,29,.13); }
+  .attach { display: none; gap: 10px; padding: 12px 12px 0; }
+  .attach.has { display: flex; }
+  .thumb { position: relative; }
+  .thumb img { display: block; height: 62px; width: 62px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(29,28,29,.13); }
+  .thumb button { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: #1d1c1d; color: #fff; font-size: 11px; line-height: 20px; cursor: pointer; }
+  textarea { display: block; width: 100%; min-height: 42px; max-height: 160px; resize: none; border: 0; outline: 0; padding: 10px 12px 2px; font: inherit; font-size: 15px; color: var(--ink); background: transparent; }
+  textarea::placeholder { color: #868686; }
+  .bar { display: flex; align-items: center; gap: 4px; padding: 4px 6px 6px; color: rgba(29,28,29,.6); font-size: 15px; }
+  .bar .plus { width: 28px; height: 28px; border-radius: 50%; background: rgba(29,28,29,.07); display: grid; place-items: center; font-size: 18px; }
+  .bar span:not(.plus) { width: 28px; height: 28px; display: grid; place-items: center; }
+  .send { margin-left: auto; height: 28px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: rgba(29,28,29,.35); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .send.ready { background: var(--green); color: #fff; }
+  .send i { width: 1px; height: 18px; background: currentColor; opacity: .4; }
+  .drop { position: fixed; inset: 0; display: none; place-items: center; background: rgba(18,100,163,.1); border: 3px dashed var(--active); font-size: 22px; font-weight: 900; color: var(--active); pointer-events: none; }
+  .drop.on { display: grid; }
+  .lightbox { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,.85); cursor: zoom-out; }
+  .lightbox.on { display: grid; }
+  .lightbox img { max-width: 92vw; max-height: 90vh; border-radius: 8px; }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    aside, .top .nav, .chead .members { display: none; }
+    .top { grid-template-columns: 1fr auto; }
+  }
+</style>
+</head>
+<body>
+ <div class="shell">
+  <div class="top">
+    <div class="nav"><span>←</span><span>→</span><span>⟲</span></div>
+    <div class="search"><svg width="13" height="13" viewBox="0 0 13 13"><circle cx="5.5" cy="5.5" r="4.3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8.6 8.6L12 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Search Fernway</div>
+    <div class="me">ML</div>
+  </div>
+
+  <div class="app">
+    <aside>
+      <div class="ws">Fernway ▾<span class="new">✎</span></div>
+      <div class="quick">
+        <div class="item"><span class="ic">💬</span>Threads</div>
+        <div class="item"><span class="ic">@</span>Mentions &amp; reactions</div>
+        <div class="item"><span class="ic">▤</span>Drafts &amp; sent</div>
+      </div>
+      <div class="group">Channels</div>
+      <div class="item"><span class="ic">#</span>general</div>
+      <div class="item on"><span class="ic">#</span>billing-bugs</div>
+      <div class="item bold"><span class="ic">#</span>design</div>
+      <div class="item"><span class="ic">#</span>releases</div>
+      <div class="item"><span class="ic">#</span>random</div>
+      <div class="group">Direct messages</div>
+      <div class="item"><span class="mini" style="background:#6a5acd">JB</span>Jonas Berg<span class="pres" style="margin-left:auto"></span></div>
+      <div class="item bold"><span class="mini" style="background:#d9822b">AT</span>Aiko Tanaka<span class="pres" style="margin-left:auto"></span></div>
+      <div class="item"><span class="mini" style="background:#2e86c1">PN</span>Priya Nair<span class="pres away" style="margin-left:auto"></span></div>
+    </aside>
+
+    <main>
+      <div class="chead"><h1># billing-bugs</h1><span class="caret">▾</span>
+        <span class="members"><span style="background:#6a5acd"></span><span style="background:#d9822b"></span><span style="background:#2bac76"></span><b>4</b></span></div>
+      <div class="tabs"><span class="on">💬 Messages</span><span>📌 Pinned</span><span>＋</span></div>
+
+      <div id="log">
+        <div class="day"><span>Today ▾</span></div>
+        <div class="msg"><div class="av" style="background:#6a5acd">JB</div><div>
+          <span class="who">Jonas Berg</span><span class="when">9:12 AM</span>
+          <div class="text">Shipped the new Billing layout to staging 🚀 Shout if anything looks off.</div></div></div>
+        <div class="msg"><div class="av" style="background:#d9822b">AT</div><div>
+          <span class="who">Aiko Tanaka</span><span class="when">9:20 AM</span>
+          <div class="text">Seats meter looks great. <span class="mention">@Jonas Berg</span> is the <code>fw_live_</code> key supposed to be fully visible on that page?</div>
+          <div class="reacts"><span class="react">👀 2</span></div></div></div>
+      </div>
+      <div class="typing" id="typing"></div>
+
+      <div class="composer" id="composer">
+        <div class="fmt"><span><b>B</b></span><span><i>I</i></span><span><s>S</s></span><i class="sep"></i><span>🔗</span><span>☰</span><span>≡</span><i class="sep"></i><span>&lt;/&gt;</span></div>
+        <div class="attach" id="attach"></div>
+        <textarea id="input" rows="1" placeholder="Message #billing-bugs" autofocus></textarea>
+        <div class="bar"><span class="plus">+</span><span>Aa</span><span>☺</span><span>@</span>
+          <button class="send" id="send" aria-label="Send now"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M1.5 1.8l13 6.2-13 6.2 2-6.2z" fill="currentColor"/></svg><i></i>▾</button></div>
+      </div>
+    </main>
+  </div>
+ </div>
+  <div class="drop" id="drop">Upload to #billing-bugs</div>
+  <div class="lightbox" id="lightbox"><img alt=""></div>
+
+<script>
+const log = document.getElementById('log'), input = document.getElementById('input'), attach = document.getElementById('attach');
+const send = document.getElementById('send'), typing = document.getElementById('typing');
+let pending = [];
+let replied = false;
+
+const now = () => new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ready = () => send.classList.toggle('ready', !!(input.value.trim() || pending.length));
+
+function addImage(file) {
+  const url = URL.createObjectURL(file);
+  pending.push(url);
+  const t = document.createElement('div');
+  t.className = 'thumb';
+  t.innerHTML = `<img src="${url}" alt=""><button aria-label="Remove">✕</button>`;
+  t.querySelector('button').onclick = () => { pending = pending.filter(u => u !== url); t.remove(); attach.classList.toggle('has', pending.length > 0); ready(); input.focus(); };
+  attach.appendChild(t);
+  attach.classList.add('has');
+  ready();
+}
+
+function post({ who, initials, color, text = '', images = [] }) {
+  const m = document.createElement('div');
+  m.className = 'msg';
+  m.innerHTML = `<div class="av" style="background:${color}">${initials}</div><div>
+    <span class="who">${who}</span><span class="when">${now()}</span>
+    ${text ? `<div class="text">${esc(text).replace(/\n/g, '<br>')}</div>` : ''}
+    ${images.map(u => `<div class="file"><div class="name">Screenshot.png ▾</div><img class="shot" src="${u}" alt="Screenshot"></div>`).join('')}</div>`;
+  log.appendChild(m);
+  m.querySelectorAll('img.shot').forEach(img => img.onload = () => log.scrollTop = log.scrollHeight);
+  log.scrollTop = log.scrollHeight;
+}
+
+function submit() {
+  const text = input.value.trim();
+  if (!text && !pending.length) return;
+  post({ who: 'Maria Lund', initials: 'ML', color: '#2bac76', text, images: pending });
+  const hadImage = pending.length > 0;
+  pending = []; attach.innerHTML = ''; attach.classList.remove('has'); input.value = ''; input.style.height = ''; ready();
+  respond(text, hadImage);
+}
+
+// Every message gets a reply: a screenshot gets the bug-report answer, text follows the script below.
+const PEOPLE = {
+  jonas: { who: 'Jonas Berg', initials: 'JB', color: '#6a5acd' },
+  aiko: { who: 'Aiko Tanaka', initials: 'AT', color: '#d9822b' },
+};
+const SCREENSHOT_REPLY = [PEOPLE.jonas, 'Good catch, will fix 👍'];
+const RULES = [
+  [/thank|thx|ty\b|🙏|appreciate/i, PEOPLE.jonas, 'np 👍'],
+  [/\?$/, PEOPLE.jonas, 'Will check'],
+];
+const FALLBACK = [
+  [PEOPLE.jonas, 'Will fix'],
+  [PEOPLE.jonas, 'On it'],
+  [PEOPLE.aiko, '+1'],
+];
+let fallbackIndex = 0;
+let replyQueue = Promise.resolve();
+
+function pickReply(text, hadImage) {
+  if (hadImage && !replied) { replied = true; return SCREENSHOT_REPLY; }
+  const rule = RULES.find(([re]) => re.test(text));
+  if (rule) return [rule[1], rule[2]];
+  return FALLBACK[fallbackIndex++ % FALLBACK.length];
+}
+
+function respond(text, hadImage) {
+  const [person, reply] = pickReply(text, hadImage);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  // Replies queue up, so sending quickly never interleaves two typing indicators.
+  replyQueue = replyQueue.then(async () => {
+    await wait(900);
+    typing.innerHTML = `<b>${person.who}</b> is typing…`;
+    await wait(1400 + Math.min(1600, reply.length * 25));
+    typing.textContent = '';
+    post({ ...person, text: reply });
+  });
+}
+
+// ⌘V works wherever focus is: images attach to the composer, text goes in as usual.
+document.addEventListener('paste', e => {
+  const files = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean);
+  if (files.length) { e.preventDefault(); files.forEach(addImage); input.focus(); }
+});
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
+input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = input.scrollHeight + 'px'; ready(); });
+send.onclick = submit;
+
+const drop = document.getElementById('drop');
+addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('on'); });
+addEventListener('dragleave', e => { if (!e.relatedTarget) drop.classList.remove('on'); });
+addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('on'); [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(addImage); input.focus(); });
+
+const lb = document.getElementById('lightbox');
+log.addEventListener('click', e => { if (e.target.matches('img.shot')) { lb.querySelector('img').src = e.target.src; lb.classList.add('on'); } });
+lb.onclick = () => lb.classList.remove('on');
+addEventListener('keydown', e => { if (e.key === 'Escape') lb.classList.remove('on'); });
+</script>
+</body>
+</html>
