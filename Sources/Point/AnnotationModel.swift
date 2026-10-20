@@ -21,8 +21,85 @@ struct ArrowAnnotation: Equatable {
     var tail: CGPoint
     var head: CGPoint
     var caption: String
+    var bend: CGFloat = 0
+    var bendPosition: CGFloat = 0.5
     var captionWidth: CGFloat? = nil
     var captionFontSize: CGFloat? = nil
+}
+
+extension ArrowAnnotation {
+    var chordLength: CGFloat { hypot(head.x - tail.x, head.y - tail.y) }
+
+    var bendHandle: CGPoint {
+        point(along: bendPosition, offset: bend)
+    }
+
+    private func point(along position: CGFloat, offset: CGFloat) -> CGPoint {
+        CGPoint(x: tail.x + position * (head.x - tail.x) - offset * (head.y - tail.y),
+                y: tail.y + position * (head.y - tail.y) + offset * (head.x - tail.x))
+    }
+
+    private var curveControl: CGPoint {
+        let root = sqrt(bendPosition)
+        let t = root / (root + sqrt(1 - bendPosition))
+        return point(along: bendPosition, offset: bend / (2 * t * (1 - t)))
+    }
+
+    var endTangent: CGPoint {
+        let control = bend == 0 || chordLength < 0.001 ? tail : curveControl
+        return CGPoint(x: head.x - control.x, y: head.y - control.y)
+    }
+
+    var shaft: CGPath {
+        let path = CGMutablePath()
+        path.move(to: tail)
+        if bend == 0 || chordLength < 0.001 {
+            path.addLine(to: head)
+        } else {
+            path.addQuadCurve(to: head, control: curveControl)
+        }
+        return path
+    }
+
+    var curveBounds: CGRect { shaft.boundingBoxOfPath }
+
+    func containsShaft(_ point: CGPoint, tolerance: CGFloat) -> Bool {
+        shaft.copy(strokingWithWidth: tolerance * 2, lineCap: .round, lineJoin: .round, miterLimit: 10).contains(point)
+    }
+
+    mutating func constrainBend(to canvas: CGRect) {
+        guard chordLength >= 0.001 else { bend = 0; return }
+        let padding = min(0.45, max(0.08, 16 / chordLength))
+        bendPosition = min(1 - padding, max(padding, bendPosition))
+        func fits(_ candidate: Self) -> Bool {
+            let rect = candidate.curveBounds
+            return rect.minX >= canvas.minX - 0.0001 && rect.maxX <= canvas.maxX + 0.0001
+                && rect.minY >= canvas.minY - 0.0001 && rect.maxY <= canvas.maxY + 0.0001
+        }
+        guard !fits(self) else { return }
+        let requested = bend
+        var low: CGFloat = 0
+        var high: CGFloat = 1
+        for _ in 0..<32 {
+            let fraction = (low + high) / 2
+            bend = requested * fraction
+            if fits(self) { low = fraction } else { high = fraction }
+        }
+        bend = requested * low
+    }
+
+    mutating func bend(toward point: CGPoint, snapped: inout Bool, canvas: CGRect) {
+        let dx = head.x - tail.x
+        let dy = head.y - tail.y
+        let length = chordLength
+        guard length >= 0.001 else { bend = 0; snapped = true; return }
+        let projection = ((point.x - tail.x) * dx + (point.y - tail.y) * dy) / (length * length)
+        bendPosition = projection
+        let offset = ((point.x - tail.x) * -dy + (point.y - tail.y) * dx) / length
+        snapped = abs(offset) <= (snapped ? 8 : 5)
+        bend = snapped ? 0 : offset / length
+        constrainBend(to: canvas)
+    }
 }
 
 struct RectangleAnnotation: Equatable {
@@ -55,12 +132,7 @@ enum Annotation: Equatable {
     var bounds: CGRect {
         switch self {
         case let .arrow(value):
-            return CGRect(
-                x: min(value.tail.x, value.head.x),
-                y: min(value.tail.y, value.head.y),
-                width: abs(value.head.x - value.tail.x),
-                height: abs(value.head.y - value.tail.y)
-            ).insetBy(dx: -10, dy: -10)
+            return value.curveBounds.insetBy(dx: -10, dy: -10)
         case let .blur(value), let .redaction(value):
             return value.rect.standardized
         case let .text(value):
@@ -71,8 +143,7 @@ enum Annotation: Equatable {
     mutating func translate(by delta: CGPoint, constrainedTo canvas: CGRect) {
         switch self {
         case var .arrow(value):
-            let union = CGRect(x: min(value.tail.x, value.head.x), y: min(value.tail.y, value.head.y), width: abs(value.head.x - value.tail.x), height: abs(value.head.y - value.tail.y))
-            let adjusted = Geometry.constrainedDelta(delta, moving: union, inside: canvas)
+            let adjusted = Geometry.constrainedDelta(delta, moving: value.curveBounds, inside: canvas)
             value.tail.x += adjusted.x
             value.tail.y += adjusted.y
             value.head.x += adjusted.x

@@ -52,7 +52,7 @@ Canvas shortcuts:
 - `Command-S`: save a flattened PNG
 - `Escape`: cancel the current operation; press again within 2.5 seconds to discard
 
-Double-click an arrow to add or edit its caption. While editing a caption,
+Drag a selected arrow’s diamond along and away from the arrow to position its curve. Drag it back near the straight line to snap it straight. Double-click an arrow to add or edit its caption. While editing a caption,
 `Return` finishes, `Option-Return` inserts a line, and `Command-Return` copies.
 Selected text and captions have direct handles for changing width and font size.
 
