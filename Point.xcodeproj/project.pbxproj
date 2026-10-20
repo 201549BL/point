@@ -20,6 +20,7 @@
 		10000000000000000000010B /* ShortcutService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000020B /* ShortcutService.swift */; };
 		10000000000000000000010D /* TrackpadShortcutService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000020D /* TrackpadShortcutService.swift */; };
 		10000000000000000000010F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000020F /* Assets.xcassets */; };
+		100000000000000000000110 /* CapturePreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000210 /* CapturePreviewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -38,6 +39,7 @@
 		10000000000000000000020C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		10000000000000000000020D /* TrackpadShortcutService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadShortcutService.swift; sourceTree = "<group>"; };
 		10000000000000000000020F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		100000000000000000000210 /* CapturePreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturePreviewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +69,7 @@
 				100000000000000000000202 /* AnnotationModel.swift */,
 				100000000000000000000203 /* AnnotationRenderer.swift */,
 				100000000000000000000204 /* AppCoordinator.swift */,
+				100000000000000000000210 /* CapturePreviewController.swift */,
 				100000000000000000000205 /* ClipboardWriter.swift */,
 				100000000000000000000206 /* DisplayOverlayController.swift */,
 				100000000000000000000207 /* PermissionService.swift */,
@@ -169,6 +172,7 @@
 				100000000000000000000102 /* AnnotationModel.swift in Sources */,
 				100000000000000000000103 /* AnnotationRenderer.swift in Sources */,
 				100000000000000000000104 /* AppCoordinator.swift in Sources */,
+				100000000000000000000110 /* CapturePreviewController.swift in Sources */,
 				100000000000000000000105 /* ClipboardWriter.swift in Sources */,
 				100000000000000000000106 /* DisplayOverlayController.swift in Sources */,
 				100000000000000000000107 /* PermissionService.swift in Sources */,
@@ -210,7 +214,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = DNPD2D9266;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -219,7 +223,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				POINT_DISPLAY_NAME = "Point Dev";
 				PRODUCT_BUNDLE_IDENTIFIER = com.eirikbjorndal.point.dev;
 				PRODUCT_NAME = "Point Dev";
@@ -232,7 +236,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = DNPD2D9266;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -241,7 +245,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				POINT_DISPLAY_NAME = Point;
 				PRODUCT_BUNDLE_IDENTIFIER = com.eirikbjorndal.point;
 				PRODUCT_NAME = "$(TARGET_NAME)";

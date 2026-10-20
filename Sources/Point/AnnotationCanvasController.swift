@@ -26,6 +26,7 @@ final class AnnotationCanvasController: NSObject {
     private var backdropAnimationTimer: Timer?
     private var backdropTransition: BackdropTransition?
     private var controlsDetachedForTransition = false
+    private var isPresentingSaveDialog = false
 
     private struct BackdropTransition {
         let startTime: TimeInterval
@@ -122,7 +123,7 @@ final class AnnotationCanvasController: NSObject {
     }
 
     func focus() {
-        guard let panel else { return }
+        guard !isPresentingSaveDialog, let panel else { return }
         NSApplication.shared.activate(ignoringOtherApps: true)
         panel.orderFrontRegardless()
         controlsPanel?.orderFrontRegardless()
@@ -130,6 +131,25 @@ final class AnnotationCanvasController: NSObject {
         if panel.firstResponder == nil, let canvasView {
             panel.makeFirstResponder(canvasView)
         }
+    }
+
+    func presentSaveDialog(_ savePanel: NSSavePanel) -> NSApplication.ModalResponse {
+        guard !isPresentingSaveDialog else { return .cancel }
+        isPresentingSaveDialog = true
+        if backdropTransition != nil {
+            updateBackdropLayout(animated: false)
+        }
+        controlsView?.closeAdjustments()
+        // Native file dialogs can ignore the requested window level. Hide both
+        // high-level windows without discarding the capture or its annotations.
+        controlsPanel?.orderOut(nil)
+        panel?.orderOut(nil)
+        defer {
+            isPresentingSaveDialog = false
+            focus()
+        }
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        return savePanel.runModal()
     }
 
     func updateStyle(_ updatedStyle: AnnotationStyle) {
@@ -782,7 +802,7 @@ final class AnnotationControlsView: NSView {
         installAdjustmentsDismissMonitors()
     }
 
-    private func closeAdjustments() {
+    fileprivate func closeAdjustments() {
         backgroundPicker.isGalleryOpen = false
         removeAdjustmentsDismissMonitors()
         adjustmentsPopover?.performClose(nil)
@@ -1297,6 +1317,7 @@ final class AnnotationCanvasView: NSView {
         case move(id: UUID, previous: CGPoint)
         case resizeRectangle(id: UUID, anchor: CGPoint)
         case resizeArrow(id: UUID, tail: Bool)
+        case bendArrow(id: UUID, snapped: Bool)
         case resizeTextWidth(id: UUID, leftX: CGFloat)
         case resizeTextSize(id: UUID, startY: CGFloat, startSize: CGFloat)
     }
@@ -1341,6 +1362,10 @@ final class AnnotationCanvasView: NSView {
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .crosshair)
+        if let id = session.selectedID, case let .arrow(arrow) = session.annotation(id: id), arrow.chordLength >= 36 {
+            let point = arrow.bendHandle
+            addCursorRect(CGRect(x: point.x - 10, y: point.y - 10, width: 20, height: 20), cursor: .openHand)
+        }
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -1433,7 +1458,14 @@ final class AnnotationCanvasView: NSView {
         case let .resizeArrow(id, tail):
             guard case var .arrow(value) = session.annotation(id: id) else { break }
             if tail { value.tail = point } else { value.head = point }
+            value.constrainBend(to: bounds)
             session.update(.arrow(value))
+        case let .bendArrow(id, wasSnapped):
+            guard case var .arrow(value) = session.annotation(id: id) else { break }
+            var snapped = wasSnapped
+            value.bend(toward: point, snapped: &snapped, canvas: bounds)
+            session.update(.arrow(value))
+            operation = .bendArrow(id: id, snapped: snapped)
         case let .resizeTextWidth(id, leftX):
             guard let annotation = session.annotation(id: id) else { break }
             let maximumWidth = Geometry.maximumUsefulTextWidth(
@@ -1467,6 +1499,8 @@ final class AnnotationCanvasView: NSView {
             preview = nil
             pendingToolGesture = nil
             pendingManipulation = nil
+            refreshHint()
+            window?.invalidateCursorRects(for: self)
             needsDisplay = true
         }
 
@@ -1722,7 +1756,7 @@ final class AnnotationCanvasView: NSView {
             case let .arrow(arrow):
                 let captionRect = Geometry.captionRect(for: arrow, text: arrow.caption, style: style, canvas: bounds)
                 if !arrow.caption.isEmpty, captionRect.insetBy(dx: -4, dy: -4).contains(point) { return (arrow.id, true) }
-                if Geometry.distance(from: point, toSegmentFrom: arrow.tail, to: arrow.head) <= max(8, style.lineWidth + 4) { return (arrow.id, false) }
+                if arrow.containsShaft(point, tolerance: max(8, style.lineWidth + 4)) || (session.selectedID == arrow.id && arrow.chordLength >= 36 && hypot(point.x - arrow.bendHandle.x, point.y - arrow.bendHandle.y) <= 10) { return (arrow.id, false) }
             case let .text(value):
                 if Geometry.standaloneTextRect(for: value, style: style, canvas: bounds).insetBy(dx: -4, dy: -4).contains(point) { return (value.id, true) }
             case .blur, .redaction:
@@ -1756,6 +1790,9 @@ final class AnnotationCanvasView: NSView {
         case let .arrow(arrow):
             if hypot(point.x - arrow.tail.x, point.y - arrow.tail.y) <= 9 { return .resizeArrow(id: id, tail: true) }
             if hypot(point.x - arrow.head.x, point.y - arrow.head.y) <= 9 { return .resizeArrow(id: id, tail: false) }
+            if arrow.chordLength >= 36, hypot(point.x - arrow.bendHandle.x, point.y - arrow.bendHandle.y) <= 10 {
+                return .bendArrow(id: id, snapped: arrow.bend == 0)
+            }
         case let .blur(value), let .redaction(value):
             let rect = value.rect.standardized
             let corners = [
@@ -1816,6 +1853,9 @@ final class AnnotationCanvasView: NSView {
             NSBezierPath(ovalIn: CGRect(x: point.x - 5.5, y: point.y - 5.5, width: 11, height: 11)).fill()
             NSColor.white.setFill()
             NSBezierPath(ovalIn: CGRect(x: point.x - 2, y: point.y - 2, width: 4, height: 4)).fill()
+        }
+        if case let .arrow(arrow) = annotation, arrow.chordLength >= 36 {
+            drawTextResizeHandle(at: arrow.bendHandle, diamond: true)
         }
         if let textRect = textRect(for: annotation) {
             drawTextResizeHandle(at: CGPoint(x: textRect.maxX, y: textRect.midY), diamond: false)

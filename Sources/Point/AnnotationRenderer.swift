@@ -82,14 +82,12 @@ enum AnnotationRenderer {
     }
 
     static func drawArrow(_ arrow: ArrowAnnotation, style: AnnotationStyle, canvas: CGRect) {
-        let angle = atan2(arrow.head.y - arrow.tail.y, arrow.head.x - arrow.tail.x)
+        let angle = atan2(arrow.endTangent.y, arrow.endTangent.x)
         let headLength = max(13, style.lineWidth * 4)
         let headAngle: CGFloat = .pi / 7
         let left = CGPoint(x: arrow.head.x - headLength * cos(angle - headAngle), y: arrow.head.y - headLength * sin(angle - headAngle))
         let right = CGPoint(x: arrow.head.x - headLength * cos(angle + headAngle), y: arrow.head.y - headLength * sin(angle + headAngle))
-        let path = NSBezierPath()
-        path.move(to: arrow.tail)
-        path.line(to: arrow.head)
+        let path = NSBezierPath(cgPath: arrow.shaft)
         path.move(to: left)
         path.line(to: arrow.head)
         path.line(to: right)

@@ -34,7 +34,11 @@ permission only to capture the region you select.
 
 Press the configured shortcut, use the optional three-finger double-tap, or
 choose **Capture Region** from the menu-bar item. Select a region, annotate it,
-then press `Return` to copy and close.
+then press `Return` to copy and close. A thumbnail appears at the bottom left
+of that screen. Choose **Save…** to save the PNG, then **Show in Finder** to
+reveal it. Drag the thumbnail into an image or file input to attach the PNG.
+The preview closes after six seconds away from the pointer; hovering
+or using the save dialog or dragging pauses the timer.
 
 Canvas shortcuts:
 
@@ -48,7 +52,7 @@ Canvas shortcuts:
 - `Command-S`: save a flattened PNG
 - `Escape`: cancel the current operation; press again within 2.5 seconds to discard
 
-Double-click an arrow to add or edit its caption. While editing a caption,
+Drag a selected arrow’s diamond along and away from the arrow to position its curve. Drag it back near the straight line to snap it straight. Double-click an arrow to add or edit its caption. While editing a caption,
 `Return` finishes, `Option-Return` inserts a line, and `Command-Return` copies.
 Selected text and captions have direct handles for changing width and font size.
 
@@ -86,7 +90,7 @@ the keychain under the `point-notary` profile.
 ```sh
 xcrun notarytool store-credentials "point-notary"
 Scripts/release.sh
-Scripts/publish-release.sh 0.1.0
+Scripts/publish-release.sh 0.2.0
 ```
 
 `release.sh` tests, archives, Developer-ID-signs, notarizes, staples, packages,
