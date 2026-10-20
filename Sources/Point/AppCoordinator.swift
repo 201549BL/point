@@ -10,7 +10,8 @@ final class AppCoordinator {
     private let preferencesController = PreferencesController()
     private var overlayController: DisplayOverlayController?
     private var annotationController: AnnotationCanvasController?
-    private var copiedConfirmationController: CopiedConfirmationController?
+    private var previewController: CapturePreviewController?
+    private var confirmationController: CaptureConfirmationController?
     private var captureTask: Task<Void, Never>?
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -108,6 +109,11 @@ final class AppCoordinator {
             return
         }
         guard captureTask == nil else { return }
+        guard previewController?.isSaving != true, previewController?.isDragging != true else { return }
+        previewController?.dismiss()
+        previewController = nil
+        confirmationController?.dismiss()
+        confirmationController = nil
 
         captureTask = Task { [weak self] in
             guard let self else { return }
@@ -186,13 +192,14 @@ final class AppCoordinator {
                 try ClipboardWriter.writePNG(renderedImage)
                 annotationController?.dismiss()
                 annotationController = nil
-                showCopiedConfirmation(near: frame)
+                showSuccessStatus(text: "Copied to clipboard")
+                showPreview(image: renderedImage, near: frame)
             } catch {
                 showError(title: "Couldn’t copy capture", message: error.localizedDescription)
             }
         }
         controller.onSave = { [weak self] renderedImage in
-            self?.savePNG(renderedImage)
+            self?.savePNG(renderedImage, near: frame)
         }
         controller.onCancel = { [weak self] in
             self?.annotationController?.dismiss()
@@ -208,40 +215,75 @@ final class AppCoordinator {
         controller.present()
     }
 
-    private func savePNG(_ image: CGImage) {
+    private func showPreview(image: CGImage, near frame: CGRect) {
+        previewController?.dismiss()
+        let controller = CapturePreviewController(image: image, near: frame)
+        controller.onSave = { [weak self, weak controller] image in
+            guard let self, let controller else { return nil }
+            return savePNG(image, near: frame, presenter: controller.presentSaveDialog)
+        }
+        controller.onDismiss = { [weak self, weak controller] in
+            guard self?.previewController === controller else { return }
+            self?.previewController = nil
+        }
+        controller.onError = { [weak self] error in
+            self?.showError(title: "Couldn’t drag capture", message: error.localizedDescription)
+        }
+        previewController = controller
+        controller.present()
+    }
+
+    @discardableResult
+    private func savePNG(_ image: CGImage, near captureFrame: CGRect, presenter: ((NSSavePanel) -> NSApplication.ModalResponse)? = nil) -> URL? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.png]
-        panel.nameFieldStringValue = "Point Capture.png"
+        let timestamp = DateFormatter()
+        timestamp.locale = Locale(identifier: "en_US_POSIX")
+        timestamp.calendar = Calendar(identifier: .gregorian)
+        timestamp.timeZone = .current
+        timestamp.dateFormat = "yyyyMMdd-HHmmss"
+        panel.nameFieldStringValue = "Point-\(timestamp.string(from: Date())).png"
         panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let response = presenter?(panel) ?? annotationController?.presentSaveDialog(panel) ?? panel.runModal()
+        guard response == .OK, let url = panel.url else { return nil }
         do {
             let representation = NSBitmapImageRep(cgImage: image)
             guard let data = representation.representation(using: .png, properties: [:]) else {
                 throw ClipboardError.pngEncodingFailed
             }
             try data.write(to: url, options: .atomic)
+            if presenter == nil {
+                showConfirmation(text: "Screenshot saved", near: captureFrame, duration: 2)
+            }
+            return url
         } catch {
             showError(title: "Couldn’t save capture", message: error.localizedDescription)
+            return nil
         }
     }
 
-    private func showCopiedConfirmation(near captureFrame: CGRect) {
+    private func showSuccessStatus(text: String) {
         guard let button = statusItem.button else { return }
         button.title = ""
-        button.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "Copied")
-
-        copiedConfirmationController?.dismiss()
-        let confirmation = CopiedConfirmationController(near: captureFrame)
-        confirmation.onDismiss = { [weak self, weak confirmation] in
-            guard self?.copiedConfirmationController === confirmation else { return }
-            self?.copiedConfirmationController = nil
-        }
-        copiedConfirmationController = confirmation
-        confirmation.present()
+        button.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: text)
+        button.toolTip = text
+        button.setAccessibilityLabel(text)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
             self?.showNormalStatusIcon()
         }
+    }
+
+    private func showConfirmation(text: String, near captureFrame: CGRect, duration: TimeInterval = 1.15) {
+        showSuccessStatus(text: text)
+        confirmationController?.dismiss()
+        let confirmation = CaptureConfirmationController(text: text, near: captureFrame, duration: duration)
+        confirmation.onDismiss = { [weak self, weak confirmation] in
+            guard self?.confirmationController === confirmation else { return }
+            self?.confirmationController = nil
+        }
+        confirmationController = confirmation
+        confirmation.present()
     }
 
     private func showNormalStatusIcon() {
@@ -267,15 +309,17 @@ final class AppCoordinator {
 }
 
 @MainActor
-final class CopiedConfirmationController {
+final class CaptureConfirmationController {
     var onDismiss: (() -> Void)?
 
     private let panel: NSPanel
+    private let duration: TimeInterval
     private var dismissWorkItem: DispatchWorkItem?
 
-    init(near captureFrame: CGRect) {
+    init(text: String, near captureFrame: CGRect, duration: TimeInterval) {
+        self.duration = duration
         let confirmationView = LiquidGlassStatusView()
-        confirmationView.show(text: "Copied to clipboard", symbol: "checkmark.circle.fill")
+        confirmationView.show(text: text, symbol: "checkmark.circle.fill")
         let panelSize = confirmationView.frame.size
         let targetScreen = NSScreen.screens.first { $0.frame.contains(CGPoint(x: captureFrame.midX, y: captureFrame.midY)) }
             ?? NSScreen.main
@@ -291,7 +335,7 @@ final class CopiedConfirmationController {
             backing: .buffered,
             defer: false
         )
-        panel.level = .screenSaver
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -313,7 +357,7 @@ final class CopiedConfirmationController {
             self?.fadeOut()
         }
         dismissWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.15, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
     }
 
     func dismiss() {

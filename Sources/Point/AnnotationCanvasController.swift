@@ -26,6 +26,7 @@ final class AnnotationCanvasController: NSObject {
     private var backdropAnimationTimer: Timer?
     private var backdropTransition: BackdropTransition?
     private var controlsDetachedForTransition = false
+    private var isPresentingSaveDialog = false
 
     private struct BackdropTransition {
         let startTime: TimeInterval
@@ -122,7 +123,7 @@ final class AnnotationCanvasController: NSObject {
     }
 
     func focus() {
-        guard let panel else { return }
+        guard !isPresentingSaveDialog, let panel else { return }
         NSApplication.shared.activate(ignoringOtherApps: true)
         panel.orderFrontRegardless()
         controlsPanel?.orderFrontRegardless()
@@ -130,6 +131,25 @@ final class AnnotationCanvasController: NSObject {
         if panel.firstResponder == nil, let canvasView {
             panel.makeFirstResponder(canvasView)
         }
+    }
+
+    func presentSaveDialog(_ savePanel: NSSavePanel) -> NSApplication.ModalResponse {
+        guard !isPresentingSaveDialog else { return .cancel }
+        isPresentingSaveDialog = true
+        if backdropTransition != nil {
+            updateBackdropLayout(animated: false)
+        }
+        controlsView?.closeAdjustments()
+        // Native file dialogs can ignore the requested window level. Hide both
+        // high-level windows without discarding the capture or its annotations.
+        controlsPanel?.orderOut(nil)
+        panel?.orderOut(nil)
+        defer {
+            isPresentingSaveDialog = false
+            focus()
+        }
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        return savePanel.runModal()
     }
 
     func updateStyle(_ updatedStyle: AnnotationStyle) {
@@ -782,7 +802,7 @@ final class AnnotationControlsView: NSView {
         installAdjustmentsDismissMonitors()
     }
 
-    private func closeAdjustments() {
+    fileprivate func closeAdjustments() {
         backgroundPicker.isGalleryOpen = false
         removeAdjustmentsDismissMonitors()
         adjustmentsPopover?.performClose(nil)
