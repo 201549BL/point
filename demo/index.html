@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Billing · Fernway</title>
+<!-- Fictional demo app for recording Point. All data on this page is fake. -->
+<style>
+  :root {
+    --bg: #f6f5f9; --panel: #fff; --ink: #1d1b2a; --muted: #75738a; --line: #e7e5ef;
+    --side: #f0eef6; --brand: #1d9e6f; --brand-ink: #0f6e4c; --warn: #b4561b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif; color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; font-size: 16px; }
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+  aside { background: var(--side); border-right: 1px solid var(--line); padding: 26px 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 10px 26px; font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #2fd39a, #138a68); box-shadow: inset 0 1px rgba(255,255,255,.4); }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 2px; border-radius: 9px; color: #55536a; text-decoration: none; font-size: 15px; }
+  .nav a.on { background: #e2dff0; color: var(--ink); font-weight: 600; }
+  .nav i { width: 16px; height: 16px; border-radius: 4px; background: currentColor; opacity: .35; }
+  .nav a.on i { opacity: .8; }
+
+  main { padding: 44px 56px 60px; max-width: 980px; }
+  .crumbs { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+  h1 { margin: 0 0 6px; font-size: 32px; letter-spacing: -.025em; }
+  .sub { color: var(--muted); font-size: 16px; margin-bottom: 30px; }
+
+  .banner { display: flex; gap: 12px; align-items: center; padding: 14px 18px; margin-bottom: 22px; border-radius: 12px; background: #fff6ec; border: 1px solid #f6dcc0; color: var(--warn); font-size: 15px; }
+  .banner b { color: #8a3e10; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+  .stat .k { color: var(--muted); font-size: 14px; }
+  .stat .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin-top: 6px; }
+  .meter { height: 8px; border-radius: 4px; background: #eceaf3; margin-top: 12px; overflow: hidden; }
+  .meter span { display: block; height: 100%; width: 83%; border-radius: 4px; background: linear-gradient(90deg, #2fd39a, #1d9e6f); }
+
+  .card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 180px 1fr; align-items: center; min-height: 64px; padding: 0 22px; border-bottom: 1px solid #efedf5; }
+  .row .k { color: var(--muted); font-size: 15px; }
+  .row .v { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
+  .link { color: var(--brand-ink); font-weight: 600; font-size: 15px; text-decoration: none; }
+  .key { font: 500 15px/1 ui-monospace, "SF Mono", Menlo, monospace; background: #f4f3f8; border: 1px solid var(--line); border-radius: 7px; padding: 8px 11px; color: #2c2a3c; }
+  .copy { font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; background: #fff; }
+  .foot { position: relative; height: 84px; }
+  .foot p { position: absolute; left: 22px; top: 31px; margin: 0; color: #9a98ab; font-size: 14px; }
+  /* The bug to point at: the primary button overflows the card and gets clipped. */
+  .save { position: absolute; right: -58px; top: 20px; height: 44px; padding: 0 22px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; font-family: inherit; font-size: 16px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+  .cancel { position: absolute; right: 118px; top: 20px; height: 44px; padding: 0 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: #3f3d52; font-family: inherit; font-size: 16px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand"><span class="logo"></span>Fernway</div>
+      <nav class="nav">
+        <a href="#"><i></i>Overview</a>
+        <a href="#"><i></i>Projects</a>
+        <a href="#"><i></i>Team</a>
+        <a href="#" class="on"><i></i>Billing</a>
+        <a href="#"><i></i>Integrations</a>
+        <a href="#"><i></i>Settings</a>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="crumbs">Workspace / Billing</div>
+      <h1>Billing</h1>
+      <div class="sub">Manage your plan, payment method and API access.</div>
+
+      <div class="banner">⚠︎ <span>You’re using <b>10 of 12 seats</b>. Add seats before inviting new teammates.</span></div>
+
+      <div class="grid">
+        <div class="stat"><div class="k">Current plan</div><div class="v">Team · $96 / month</div></div>
+        <div class="stat"><div class="k">Seats used</div><div class="v">10 of 12</div><div class="meter"><span></span></div></div>
+      </div>
+
+      <div class="card">
+        <div class="row"><span class="k">Account email</span><span class="v">maria.lund@fernway.example</span></div>
+        <div class="row"><span class="k">Plan</span><span class="v">Team · 12 seats <a class="link" href="#">Upgrade</a></span></div>
+        <div class="row"><span class="k">Payment</span><span class="v">Visa ending 4242</span></div>
+        <div class="row"><span class="k">API key</span><span class="v"><span class="key">fw_live_8fK2c9Lr0ZqX41Tb7Wd</span><span class="copy">Copy</span></span></div>
+        <div class="foot">
+          <p>Changes apply from your next invoice.</p>
+          <button class="cancel">Cancel</button>
+          <button class="save">Save changes</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
