@@ -440,7 +440,7 @@
       opacity: 0;
     }
     .chapter-timeline:hover .demo-playhead, .chapter-timeline:focus-within .demo-playhead { opacity: 1; }
-    .demo-transport { display: flex; align-items: center; gap: 8px; padding-top: 2px; }
+    .demo-transport { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 2px; }
     .demo-transport button {
       min-height: 36px;
       min-width: 66px;
@@ -513,6 +513,8 @@
     @media (max-width: 420px) {
       .chapter-list { gap: 4px; }
       .demo-chapter { font-size: 10px; }
+      .demo-transport { gap: 6px; }
+      .demo-transport button { min-width: 0; padding: 0 8px; }
       .demo-clock { font-size: 11px; }
     }
 
@@ -543,8 +545,8 @@
       <section class="demo-wrap" aria-label="Point screenshot annotation preview">
         <div class="demo video-demo">
           <video id="point-demo" controls muted loop playsinline preload="metadata" width="1920" height="1206" poster="point-demo-poster.jpg?v=030-chapters" aria-label="Point demo: capture with a Sunset wash, frame and annotate a screenshot, blur an email, redact a key, preview the result, and share it in chat.">
-            <source src="point-demo.mp4?v=030-chapters" type="video/mp4">
-            <a href="point-demo.mp4?v=030-chapters">Watch the Point demo video</a>
+            <source src="point-demo.mp4?v=030-sound" type="video/mp4">
+            <a href="point-demo.mp4?v=030-sound">Watch the Point demo video</a>
           </video>
           <div class="demo-controls" hidden>
             <div class="chapter-timeline">
@@ -561,10 +563,11 @@
             <div class="demo-transport">
               <button class="video-toggle" type="button" aria-label="Play demo">Play</button>
               <button class="video-replay" type="button" aria-label="Replay demo">Replay</button>
+              <button class="video-sound" type="button" aria-label="Enable demo sound" aria-pressed="false" aria-controls="point-demo">Sound off</button>
               <output class="demo-clock" aria-hidden="true">0:00 / 0:41</output>
             </div>
           </div>
-          <p class="demo-fallback" hidden>Having trouble playing the demo? <a href="point-demo.mp4?v=030-chapters">Open the video directly.</a></p>
+          <p class="demo-fallback" hidden>Having trouble playing the demo? <a href="point-demo.mp4?v=030-sound">Open the video directly.</a></p>
         </div>
       </section>
 
@@ -592,6 +595,6 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
-  <script src="demo-player.js?v=030-chapters-2"></script>
+  <script src="demo-player.js?v=030-sound"></script>
 </body>
 </html>

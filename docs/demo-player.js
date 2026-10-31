@@ -4,6 +4,7 @@
   const controls = player.querySelector('.demo-controls');
   const toggle = player.querySelector('.video-toggle');
   const replay = player.querySelector('.video-replay');
+  const sound = player.querySelector('.video-sound');
   const scrubber = player.querySelector('.demo-scrub');
   const clock = player.querySelector('.demo-clock');
   const chapterList = player.querySelector('.chapter-list');
@@ -55,6 +56,9 @@
     clock.textContent = `${formatTime(time)} / ${formatTime(Math.ceil(duration))}`;
     toggle.textContent = video.paused ? 'Play' : 'Pause';
     toggle.setAttribute('aria-label', `${video.paused ? 'Play' : 'Pause'} demo`);
+    sound.textContent = video.muted ? 'Sound off' : 'Sound on';
+    sound.setAttribute('aria-pressed', String(!video.muted));
+    sound.setAttribute('aria-label', `${video.muted ? 'Enable' : 'Disable'} demo sound`);
   }
 
   function measureTracks() {
@@ -92,6 +96,9 @@
 
   chapters.forEach(chapter => chapter.button.addEventListener('click', () => seek(chapter.start)));
   toggle.addEventListener('click', () => video.paused ? play() : video.pause());
+  sound.addEventListener('click', () => {
+    video.muted = !video.muted;
+  });
   replay.addEventListener('click', () => {
     seek(0);
     play();
@@ -140,6 +147,7 @@
   video.addEventListener('durationchange', metadataLoaded);
   video.addEventListener('timeupdate', sync);
   video.addEventListener('seeked', sync);
+  video.addEventListener('volumechange', sync);
   video.addEventListener('play', () => {
     cancelAnimationFrame(animationFrame);
     tick();
