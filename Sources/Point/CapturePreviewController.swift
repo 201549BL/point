@@ -1,5 +1,28 @@
 import AppKit
 
+struct CapturePreviewLayout {
+    let cardSize: NSSize
+    let screenFrame: NSRect
+    static let peekWidth: CGFloat = 44
+    static let inset: CGFloat = 16
+
+    init(imageSize: NSSize, screenFrame: NSRect) {
+        let scale = min(200 / imageSize.width, 144 / imageSize.height)
+        cardSize = NSSize(width: max(140, imageSize.width * scale), height: max(96, imageSize.height * scale))
+        self.screenFrame = screenFrame
+    }
+
+    func panelFrame(expanded: Bool) -> NSRect {
+        NSRect(x: screenFrame.minX, y: screenFrame.minY + 16,
+               width: expanded ? cardSize.width + Self.inset * 2 : Self.peekWidth,
+               height: cardSize.height + Self.inset * 2)
+    }
+
+    func cardOrigin(expanded: Bool) -> NSPoint {
+        NSPoint(x: expanded ? Self.inset : Self.peekWidth - cardSize.width - 8, y: Self.inset)
+    }
+}
+
 struct CapturePreviewLifetime {
     enum PauseReason: Hashable { case hover, save, drag }
     private(set) var savedURL: URL?
@@ -85,6 +108,9 @@ final class CapturePreviewController: NSObject {
     private let image: CGImage
     private let panel: NSPanel
     private let preview: CapturePreviewView
+    private let container: CapturePreviewContainer
+    private let layout: CapturePreviewLayout
+    private var expanded = false
     private var lifetime = CapturePreviewLifetime()
     private var dismissWorkItem: DispatchWorkItem?
     private var dismissed = false
@@ -94,16 +120,21 @@ final class CapturePreviewController: NSObject {
 
     init(image: CGImage, near captureFrame: CGRect) {
         self.image = image
-        let scale = min(240 / CGFloat(image.width), 180 / CGFloat(image.height))
-        let size = NSSize(width: max(140, CGFloat(image.width) * scale), height: max(96, CGFloat(image.height) * scale))
         let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: captureFrame.midX, y: captureFrame.midY)) } ?? NSScreen.main
         let visibleFrame = screen?.visibleFrame ?? captureFrame
+        layout = CapturePreviewLayout(imageSize: NSSize(width: image.width, height: image.height), screenFrame: visibleFrame)
         panel = NSPanel(
-            contentRect: NSRect(x: visibleFrame.minX + 20, y: visibleFrame.minY + 20, width: size.width, height: size.height),
+            contentRect: layout.panelFrame(expanded: false),
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false
         )
-        preview = CapturePreviewView(image: image, size: size)
+        preview = CapturePreviewView(image: image, size: layout.cardSize)
+        container = CapturePreviewContainer(frame: NSRect(origin: .zero, size: layout.panelFrame(expanded: false).size))
         super.init()
+        container.wantsLayer = true
+        container.layer?.masksToBounds = true
+        container.addSubview(preview)
+        preview.setFrameOrigin(NSPoint(x: -layout.cardSize.width - 20, y: CapturePreviewLayout.inset))
+        preview.frameCenterRotation = -6
         panel.title = "Copied screenshot"
         panel.setAccessibilityLabel("Copied to clipboard")
         panel.level = .floating
@@ -112,22 +143,23 @@ final class CapturePreviewController: NSObject {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-        preview.onHover = { [weak self] hovering in self?.setHovering(hovering) }
+        container.onHover = { [weak self] hovering in self?.setHovering(hovering) }
         preview.onAction = { [weak self] in self?.performAction() }
         preview.onDismiss = { [weak self] in self?.dismiss() }
         preview.onDragState = { [weak self] dragging in
             guard let self else { return }
-            if !dragging { self.refreshHover() }
             self.lifetime.setPaused(dragging, for: .drag, now: ProcessInfo.processInfo.systemUptime)
+            if !dragging { self.refreshHover() }
             self.scheduleDismissal()
         }
         preview.onError = { [weak self] error in self?.onError?(error) }
-        panel.contentView = preview
+        panel.contentView = container
     }
 
     func present() {
         guard !dismissed else { return }
         panel.orderFrontRegardless()
+        animatePreview(expanded: false)
         refreshHover()
     }
 
@@ -156,8 +188,8 @@ final class CapturePreviewController: NSObject {
         preview.setActionEnabled(false)
         defer {
             preview.setActionEnabled(true)
-            refreshHover()
             lifetime.setPaused(false, for: .save, now: ProcessInfo.processInfo.systemUptime)
+            refreshHover()
             scheduleDismissal()
         }
         if let url = onSave?(image) {
@@ -172,9 +204,24 @@ final class CapturePreviewController: NSObject {
 
     private func setHovering(_ hovering: Bool) {
         guard !dismissed else { return }
-        preview.setHovering(hovering)
+        let shouldExpand = hovering || isSaving || isDragging
+        if shouldExpand != expanded {
+            expanded = shouldExpand
+            animatePreview(expanded: shouldExpand)
+        }
+        preview.setHovering(shouldExpand)
         lifetime.setPaused(hovering, for: .hover, now: ProcessInfo.processInfo.systemUptime)
         scheduleDismissal()
+    }
+
+    private func animatePreview(expanded: Bool) {
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.28
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().setFrame(layout.panelFrame(expanded: expanded), display: true)
+            preview.animator().setFrameOrigin(layout.cardOrigin(expanded: expanded))
+            preview.animator().frameCenterRotation = expanded ? 0 : -6
+        }
     }
 
     private func scheduleDismissal() {
@@ -189,7 +236,6 @@ final class CapturePreviewController: NSObject {
 
 @MainActor
 private final class CapturePreviewView: NSView, NSDraggingSource {
-    var onHover: ((Bool) -> Void)?
     var onAction: (() -> Void)?
     var onDismiss: (() -> Void)?
 
@@ -202,7 +248,6 @@ private final class CapturePreviewView: NSView, NSDraggingSource {
     private let overlay = NSView()
     private let actionButton = NSButton(title: "Save…", target: nil, action: nil)
     private let closeButton = NSButton()
-    private var hoverArea: NSTrackingArea?
 
     init(image: CGImage, size: NSSize) {
         dragExport = CapturePreviewDragExport(image: image)
@@ -324,6 +369,12 @@ private final class CapturePreviewView: NSView, NSDraggingSource {
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         onDragState?(false)
     }
+}
+
+@MainActor
+private final class CapturePreviewContainer: NSView {
+    var onHover: ((Bool) -> Void)?
+    private var hoverArea: NSTrackingArea?
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()

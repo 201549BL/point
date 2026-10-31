@@ -3,6 +3,49 @@ import XCTest
 @testable import Point
 
 final class CapturePreviewTests: XCTestCase {
+    func testPeekingPreviewOnlyOccupiesNarrowStripOnCaptureScreen() {
+        let screen = NSRect(x: -1920, y: 40, width: 1920, height: 1040)
+        let layout = CapturePreviewLayout(imageSize: NSSize(width: 3840, height: 2160), screenFrame: screen)
+        let collapsed = layout.panelFrame(expanded: false)
+        let expanded = layout.panelFrame(expanded: true)
+        XCTAssertEqual(collapsed.minX, screen.minX)
+        XCTAssertEqual(collapsed.width, 44)
+        XCTAssertTrue(screen.contains(collapsed))
+        XCTAssertTrue(screen.contains(expanded))
+        XCTAssertLessThan(layout.cardOrigin(expanded: false).x, 0)
+        XCTAssertTrue(NSRect(origin: .zero, size: expanded.size).contains(
+            NSRect(origin: layout.cardOrigin(expanded: true), size: layout.cardSize)))
+        XCTAssertLessThanOrEqual(layout.cardSize.width, 200)
+        XCTAssertLessThanOrEqual(layout.cardSize.height, 144)
+    }
+
+    @MainActor
+    func testPreviewExpandsOnHoverAndNeverBecomesKey() throws {
+        _ = NSApplication.shared
+        let context = try XCTUnwrap(CGContext(data: nil, width: 800, height: 600, bitsPerComponent: 8,
+                                             bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let screen = try XCTUnwrap(NSScreen.main)
+        let controller = CapturePreviewController(image: try XCTUnwrap(context.makeImage()), near: screen.frame)
+        controller.present()
+        defer { controller.dismiss() }
+        let panel = try XCTUnwrap(NSApp.windows.first { $0.title == "Copied screenshot" })
+        XCTAssertTrue(panel.styleMask.contains(.nonactivatingPanel))
+        XCTAssertFalse(panel.isKeyWindow)
+        XCTAssertEqual(panel.frame.width, 44, accuracy: 0.5)
+        let event = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero,
+            modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber,
+            context: nil, eventNumber: 0, trackingNumber: 0, userData: nil))
+        panel.contentView?.mouseEntered(with: event)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        XCTAssertEqual(panel.frame.width, 224, accuracy: 0.5)
+        XCTAssertFalse(panel.isKeyWindow)
+        panel.contentView?.mouseExited(with: event)
+        RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        XCTAssertEqual(panel.frame.width, 44, accuracy: 0.5)
+        XCTAssertFalse(panel.isKeyWindow)
+    }
+
     func testDragPauseComposesWithHoverAndSaveWithoutSaving() throws {
         var lifetime = CapturePreviewLifetime()
         lifetime.setPaused(false, for: .hover, now: 0)

@@ -13,19 +13,24 @@ swift build --disable-sandbox --package-path "$repo_dir" -c "$configuration"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp "$repo_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
 plutil -replace CFBundleExecutable -string Point "$app_dir/Contents/Info.plist"
-plutil -replace CFBundleIdentifier -string com.eirikbjorndal.point "$app_dir/Contents/Info.plist"
-plutil -replace CFBundleDisplayName -string Point "$app_dir/Contents/Info.plist"
-plutil -replace CFBundleName -string Point "$app_dir/Contents/Info.plist"
+plutil -replace CFBundleIdentifier -string com.eirikbjorndal.point.dev "$app_dir/Contents/Info.plist"
+plutil -replace CFBundleDisplayName -string "Point Dev" "$app_dir/Contents/Info.plist"
+plutil -replace CFBundleName -string "Point Dev" "$app_dir/Contents/Info.plist"
 plutil -replace CFBundleShortVersionString -string 0.2.0 "$app_dir/Contents/Info.plist"
 plutil -replace CFBundleVersion -string 3 "$app_dir/Contents/Info.plist"
 cp "$build_dir/Point" "$app_dir/Contents/MacOS/Point"
-signing_identity="${POINT_SIGNING_IDENTITY:-}"
-if [[ -n "$signing_identity" ]]; then
+signing_identity="${POINT_SIGNING_IDENTITY:-Apple Development}"
+if [[ -n "$signing_identity" && "$signing_identity" != "-" ]]; then
     codesign --force --options runtime --timestamp --sign "$signing_identity" "$app_dir"
+    signature_details="$(codesign --display --verbose=2 "$app_dir" 2>&1)"
+    if [[ "$signature_details" != *"Authority=Apple Development:"* || "$signature_details" != *"TeamIdentifier=DNPD2D9266"* ]]; then
+        print -u2 -- "Point Dev requires this project's Apple Development identity (team DNPD2D9266)."
+        exit 1
+    fi
+    codesign --verify --deep --strict "$app_dir"
 else
-    print -u2 -- "warning: using an ad-hoc signature; Screen Recording permission may reset after rebuilding"
-    print -u2 -- "set POINT_SIGNING_IDENTITY to an Apple Development identity for a stable local build"
-    codesign --force --sign - "$app_dir"
+    print -u2 -- "Point Dev requires a stable Apple Development signing identity. Ad-hoc signing loses capture permissions across rebuilds."
+    exit 1
 fi
 
 print -r -- "$app_dir"

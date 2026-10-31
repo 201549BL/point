@@ -13,6 +13,7 @@ final class AppCoordinator {
     private var previewController: CapturePreviewController?
     private var confirmationController: CaptureConfirmationController?
     private var captureTask: Task<Void, Never>?
+    private var previousApplication: NSRunningApplication?
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private lazy var captureItem = NSMenuItem(
@@ -87,10 +88,6 @@ final class AppCoordinator {
         }
     }
 
-    func prepareForTermination() {
-        permissionService.scheduleRelaunchAfterTerminationIfNeeded()
-    }
-
     @objc private func beginCaptureFromMenu() {
         beginCapture()
     }
@@ -114,6 +111,9 @@ final class AppCoordinator {
         previewController = nil
         confirmationController?.dismiss()
         confirmationController = nil
+
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        previousApplication = frontmost?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : frontmost
 
         captureTask = Task { [weak self] in
             guard let self else { return }
@@ -175,6 +175,7 @@ final class AppCoordinator {
         controller.onCancel = { [weak self] in
             self?.overlayController?.dismiss()
             self?.overlayController = nil
+            self?.restorePreviousApplication()
         }
         overlayController = controller
         controller.present()
@@ -194,6 +195,7 @@ final class AppCoordinator {
                 annotationController = nil
                 showSuccessStatus(text: "Copied to clipboard")
                 showPreview(image: renderedImage, near: frame)
+                restorePreviousApplication()
             } catch {
                 showError(title: "Couldn’t copy capture", message: error.localizedDescription)
             }
@@ -204,6 +206,7 @@ final class AppCoordinator {
         controller.onCancel = { [weak self] in
             self?.annotationController?.dismiss()
             self?.annotationController = nil
+            self?.restorePreviousApplication()
         }
         controller.onError = { [weak self] error in
             self?.showError(title: "Couldn’t render capture", message: error.localizedDescription)
@@ -213,6 +216,13 @@ final class AppCoordinator {
         }
         annotationController = controller
         controller.present()
+    }
+
+    private func restorePreviousApplication() {
+        let application = previousApplication
+        previousApplication = nil
+        guard let application, !application.isTerminated else { return }
+        application.activate(options: [])
     }
 
     private func showPreview(image: CGImage, near frame: CGRect) {

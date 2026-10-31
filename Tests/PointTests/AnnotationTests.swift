@@ -163,6 +163,20 @@ final class AnnotationTests: XCTestCase {
         XCTAssertFalse(motion.hadMotion)
     }
 
+    @MainActor
+    func testPermissionServiceDiscardsLegacyAutomaticRelaunchMarker() {
+        let defaults = UserDefaults.standard
+        let key = "screenCapturePermissionRelaunchPending"
+        let previous = defaults.object(forKey: key)
+        defer {
+            if let previous { defaults.set(previous, forKey: key) }
+            else { defaults.removeObject(forKey: key) }
+        }
+        defaults.set(true, forKey: key)
+        _ = PermissionService()
+        XCTAssertNil(defaults.object(forKey: key))
+    }
+
     func testPermissionIsRequestedAgainAfterTCCResetEvenIfPreviousRequestWasRemembered() {
         XCTAssertTrue(
             ScreenCapturePermissionRequestPolicy.shouldRequest(

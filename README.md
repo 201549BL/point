@@ -34,9 +34,10 @@ permission only to capture the region you select.
 
 Press the configured shortcut, use the optional three-finger double-tap, or
 choose **Capture Region** from the menu-bar item. Select a region, annotate it,
-then press `Return` to copy and close. A thumbnail appears at the bottom left
-of that screen. Choose **Save…** to save the PNG, then **Show in Finder** to
-reveal it. Drag the thumbnail into an image or file input to attach the PNG.
+then press `Return` to copy and close, returning focus to your previous app
+so you can paste immediately. A small tilted thumbnail peeks in from the bottom
+left edge of that screen; hover to slide it fully into view. Choose **Save…**
+to save the PNG, then **Show in Finder** to reveal it. Drag the thumbnail into an image or file input to attach the PNG.
 The preview closes after six seconds away from the pointer; hovering
 or using the save dialog or dragging pauses the timer.
 
@@ -75,11 +76,19 @@ Run the test suite with:
 swift test
 ```
 
-To create and install a signed local Release build:
+To create and install a local Release build with the same Developer ID signing
+identity as published releases:
 
 ```sh
 Scripts/install-local.sh
 ```
+
+### Screen Recording recovery
+
+If Point is enabled in Settings but asks again after a rebuild, run
+`Scripts/install-local.sh --repair-permissions`, then allow Point once and reopen
+it if macOS asks. Normal installs preserve the signing identity and never reset
+permissions. See [the diagnosis and recovery guide](docs/screen-recording-permissions.md).
 
 ## Create a release
 

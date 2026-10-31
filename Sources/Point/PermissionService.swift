@@ -13,12 +13,16 @@ enum ScreenCapturePermissionRequestPolicy {
 @MainActor
 final class PermissionService {
     private let hasRequestedKey = "hasRequestedScreenCapturePermission"
-    private let relaunchPendingKey = "screenCapturePermissionRelaunchPending"
+    private var needsRelaunch = false
+
+    init() {
+        UserDefaults.standard.removeObject(forKey: "screenCapturePermissionRelaunchPending")
+    }
 
     func ensureCapturePermission() -> Bool {
         let hasAccess = CGPreflightScreenCaptureAccess()
         if hasAccess {
-            UserDefaults.standard.removeObject(forKey: relaunchPendingKey)
+            needsRelaunch = false
             return true
         }
 
@@ -38,7 +42,7 @@ final class PermissionService {
                 return true
             }
             if granted {
-                UserDefaults.standard.set(true, forKey: relaunchPendingKey)
+                needsRelaunch = true
                 showRelaunchAlert()
                 return false
             }
@@ -47,7 +51,7 @@ final class PermissionService {
             }
         }
 
-        if UserDefaults.standard.bool(forKey: relaunchPendingKey) {
+        if needsRelaunch {
             showRelaunchAlert()
             return false
         }
@@ -57,37 +61,36 @@ final class PermissionService {
 
     func openSystemSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else { return }
-        if NSWorkspace.shared.open(url) {
-            // When macOS terminates the app after the permission switch changes,
-            // AppDelegate uses this marker to launch the same build again.
-            UserDefaults.standard.set(true, forKey: relaunchPendingKey)
-        }
+        NSWorkspace.shared.open(url)
     }
 
-    func scheduleRelaunchAfterTerminationIfNeeded() {
-        guard UserDefaults.standard.bool(forKey: relaunchPendingKey) else { return }
-
-        // Consume this before launching the helper so an unsuccessful permission
-        // change can never trap the user in a quit/relaunch loop.
-        UserDefaults.standard.removeObject(forKey: relaunchPendingKey)
-
+    private func relaunch() {
         let bundlePath = Bundle.main.bundleURL.path
         let helper = Process()
         helper.executableURL = URL(fileURLWithPath: "/bin/sh")
         helper.arguments = [
             "-c",
-            "sleep 1; /usr/bin/open \"$1\"",
+            "while /bin/kill -0 \"$2\" 2>/dev/null; do sleep 0.1; done; /usr/bin/open \"$1\"",
             "point-permission-relaunch",
             bundlePath,
+            String(ProcessInfo.processInfo.processIdentifier),
         ]
-        try? helper.run()
+        do {
+            try helper.run()
+            NSApplication.shared.terminate(nil)
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Couldn’t relaunch Point"
+            alert.informativeText = "Quit and reopen Point manually to finish enabling Screen Recording."
+            alert.runModal()
+        }
     }
 
     private func showRecoveryAlert() {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Screen Recording is off"
-        alert.informativeText = "Enable Point in System Settings › Privacy & Security › Screen & System Audio Recording. If macOS quits Point, it will reopen automatically."
+        alert.informativeText = "Enable Point in System Settings › Privacy & Security › Screen & System Audio Recording. After changing permission, quit and reopen Point. If it is already enabled but captures still fail after a local rebuild, see README’s Screen Recording recovery instructions."
         alert.addButton(withTitle: "Open Settings")
         alert.addButton(withTitle: "Cancel")
         if alert.runModal() == .alertFirstButtonReturn {
@@ -103,9 +106,9 @@ final class PermissionService {
         alert.addButton(withTitle: "Quit & Reopen")
         alert.addButton(withTitle: "Later")
         if alert.runModal() == .alertFirstButtonReturn {
-            NSApplication.shared.terminate(nil)
+            relaunch()
         } else {
-            UserDefaults.standard.removeObject(forKey: relaunchPendingKey)
+            needsRelaunch = false
         }
     }
 }
