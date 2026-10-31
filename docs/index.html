@@ -453,6 +453,9 @@
       cursor: pointer;
     }
     .demo-transport button:hover { background: rgba(255,255,255,.95); }
+    .demo-transport .video-sound { display: grid; place-items: center; flex: 0 0 36px; width: 36px; min-width: 36px; height: 36px; padding: 0; }
+    .video-sound svg { grid-area: 1 / 1; width: 18px; height: 18px; }
+    .video-sound[aria-pressed="false"] .sound-on, .video-sound[aria-pressed="true"] .sound-off { display: none; }
     .demo-clock { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .demo-controls :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     .demo-scrub:disabled { cursor: wait; }
@@ -563,7 +566,10 @@
             <div class="demo-transport">
               <button class="video-toggle" type="button" aria-label="Play demo">Play</button>
               <button class="video-replay" type="button" aria-label="Replay demo">Replay</button>
-              <button class="video-sound" type="button" aria-label="Enable demo sound" aria-pressed="false" aria-controls="point-demo">Sound off</button>
+              <button class="video-sound" type="button" aria-label="Unmute demo" title="Unmute demo" aria-pressed="false" aria-controls="point-demo">
+                <svg class="sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="m17 9 5 6m0-6-5 6"/></svg>
+                <svg class="sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
+              </button>
               <output class="demo-clock" aria-hidden="true">0:00 / 0:41</output>
             </div>
           </div>
@@ -595,6 +601,6 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
-  <script src="demo-player.js?v=030-sound"></script>
+  <script src="demo-player.js?v=030-sound-icon"></script>
 </body>
 </html>

@@ -56,9 +56,10 @@
     clock.textContent = `${formatTime(time)} / ${formatTime(Math.ceil(duration))}`;
     toggle.textContent = video.paused ? 'Play' : 'Pause';
     toggle.setAttribute('aria-label', `${video.paused ? 'Play' : 'Pause'} demo`);
-    sound.textContent = video.muted ? 'Sound off' : 'Sound on';
     sound.setAttribute('aria-pressed', String(!video.muted));
-    sound.setAttribute('aria-label', `${video.muted ? 'Enable' : 'Disable'} demo sound`);
+    const soundAction = video.muted ? 'Unmute demo' : 'Mute demo';
+    sound.setAttribute('aria-label', soundAction);
+    sound.title = soundAction;
   }
 
   function measureTracks() {
