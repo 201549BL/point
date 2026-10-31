@@ -108,7 +108,7 @@ the keychain under the `point-notary` profile.
 ```sh
 xcrun notarytool store-credentials "point-notary"
 Scripts/release.sh
-Scripts/publish-release.sh 0.2.0
+Scripts/publish-release.sh 0.3.0
 ```
 
 `release.sh` tests, archives, Developer-ID-signs, notarizes, staples, packages,
