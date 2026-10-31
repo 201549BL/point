@@ -1,6 +1,7 @@
 (() => {
   const player = document.querySelector('.video-demo');
   const video = player.querySelector('video');
+  const starter = player.querySelector('.demo-start');
   const controls = player.querySelector('.demo-controls');
   const toggle = player.querySelector('.video-toggle');
   const replay = player.querySelector('.video-replay');
@@ -96,6 +97,7 @@
   }
 
   chapters.forEach(chapter => chapter.button.addEventListener('click', () => seek(chapter.start)));
+  starter.addEventListener('click', play);
   toggle.addEventListener('click', () => video.paused ? play() : video.pause());
   sound.addEventListener('click', () => {
     video.muted = !video.muted;
@@ -149,6 +151,11 @@
   video.addEventListener('timeupdate', sync);
   video.addEventListener('seeked', sync);
   video.addEventListener('volumechange', sync);
+  video.addEventListener('playing', () => {
+    const moveFocus = document.activeElement === starter;
+    starter.hidden = true;
+    if (moveFocus) toggle.focus({ preventScroll: true });
+  }, { once: true });
   video.addEventListener('play', () => {
     cancelAnimationFrame(animationFrame);
     tick();
@@ -159,6 +166,7 @@
   });
   video.addEventListener('error', () => {
     cancelAnimationFrame(animationFrame);
+    starter.hidden = true;
     controls.hidden = true;
     video.controls = true;
     player.querySelector('.demo-fallback').hidden = false;
@@ -173,8 +181,8 @@
   }).observe(chapterList);
 
   video.controls = false;
+  starter.hidden = false;
   controls.hidden = false;
   metadataLoaded();
   sync();
-  if (!reducedMotion.matches) play();
 })();

@@ -373,6 +373,7 @@
     .video-demo::before,
     .video-demo::after { display: none; }
 
+    .demo-stage { position: relative; }
     .video-demo video {
       width: 100%;
       height: auto;
@@ -380,6 +381,33 @@
       border-radius: 25px;
       background: #eef0f5;
     }
+
+    .demo-start {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 56px;
+      padding: 0 24px;
+      border: 0;
+      border-radius: 999px;
+      color: white;
+      background: var(--accent-dark);
+      box-shadow: 0 8px 24px rgba(49, 27, 100, .3);
+      font: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .demo-start[hidden] { display: none; }
+    .demo-start:hover { background: #542db5; }
+    .demo-start:focus-visible { outline: 3px solid white; outline-offset: 4px; box-shadow: 0 0 0 7px var(--accent-dark), 0 8px 24px rgba(49, 27, 100, .3); }
+    .demo-start svg { width: 18px; height: 18px; }
 
     .demo-controls { width: 100%; padding: 8px 14px 6px; }
     .demo-controls[hidden] { display: none; }
@@ -547,10 +575,16 @@
 
       <section class="demo-wrap" aria-label="Point screenshot annotation preview">
         <div class="demo video-demo">
-          <video id="point-demo" controls muted loop playsinline preload="metadata" width="1920" height="1206" poster="point-demo-poster.jpg?v=030-chapters" aria-label="Point demo: capture with a Sunset wash, frame and annotate a screenshot, blur an email, redact a key, preview the result, and share it in chat.">
-            <source src="point-demo.mp4?v=030-felt-v7" type="video/mp4">
-            <a href="point-demo.mp4?v=030-felt-v7">Watch the Point demo video</a>
-          </video>
+          <div class="demo-stage">
+            <video id="point-demo" controls loop playsinline preload="metadata" width="1920" height="1206" poster="point-demo-poster.jpg?v=030-chapters" aria-label="Point demo: capture with a Sunset wash, frame and annotate a screenshot, blur an email, redact a key, preview the result, and share it in chat.">
+              <source src="point-demo.mp4?v=030-felt-v7" type="video/mp4">
+              <a href="point-demo.mp4?v=030-felt-v7">Watch the Point demo video</a>
+            </video>
+            <button class="demo-start" type="button" aria-controls="point-demo" hidden>
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="m8 4 13 8-13 8Z"/></svg>
+              Watch demo
+            </button>
+          </div>
           <div class="demo-controls" hidden>
             <div class="chapter-timeline">
               <div class="chapter-list" role="group" aria-label="Demo chapters">
@@ -566,7 +600,7 @@
             <div class="demo-transport">
               <button class="video-toggle" type="button" aria-label="Play demo">Play</button>
               <button class="video-replay" type="button" aria-label="Replay demo">Replay</button>
-              <button class="video-sound" type="button" aria-label="Unmute demo" title="Unmute demo" aria-pressed="false" aria-controls="point-demo">
+              <button class="video-sound" type="button" aria-label="Mute demo" title="Mute demo" aria-pressed="true" aria-controls="point-demo">
                 <svg class="sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="m17 9 5 6m0-6-5 6"/></svg>
                 <svg class="sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
               </button>
@@ -601,6 +635,6 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
-  <script src="demo-player.js?v=030-sound-icon"></script>
+  <script src="demo-player.js?v=030-watch-demo"></script>
 </body>
 </html>
