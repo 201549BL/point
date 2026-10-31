@@ -386,27 +386,12 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 56px;
-      padding: 0 24px;
-      border: 0;
-      border-radius: 999px;
-      color: white;
-      background: var(--accent-dark);
-      box-shadow: 0 8px 24px rgba(49, 27, 100, .3);
-      font: inherit;
-      font-size: 16px;
-      font-weight: 700;
+      translate: -50% -50%;
+      font-family: inherit;
       white-space: nowrap;
       cursor: pointer;
     }
     .demo-start[hidden] { display: none; }
-    .demo-start:hover { background: #542db5; }
-    .demo-start:focus-visible { outline: 3px solid white; outline-offset: 4px; box-shadow: 0 0 0 7px var(--accent-dark), 0 8px 24px rgba(49, 27, 100, .3); }
     .demo-start svg { width: 18px; height: 18px; }
 
     .demo-controls { width: 100%; padding: 8px 14px 6px; }
@@ -580,7 +565,7 @@
               <source src="point-demo.mp4?v=030-felt-v7" type="video/mp4">
               <a href="point-demo.mp4?v=030-felt-v7">Watch the Point demo video</a>
             </video>
-            <button class="demo-start" type="button" aria-controls="point-demo" hidden>
+            <button class="button primary demo-start" type="button" aria-controls="point-demo" hidden>
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="m8 4 13 8-13 8Z"/></svg>
               Watch demo
             </button>
