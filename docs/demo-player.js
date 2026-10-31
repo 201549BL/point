@@ -7,9 +7,11 @@
   const scrubber = player.querySelector('.demo-scrub');
   const clock = player.querySelector('.demo-clock');
   const chapterList = player.querySelector('.chapter-list');
+  const timeline = player.querySelector('.chapter-timeline');
   const chapters = [...player.querySelectorAll('.demo-chapter')].map(button => ({
     button,
     start: Number(button.dataset.start),
+    track: button.querySelector('.chapter-track'),
     label: button.textContent.trim(),
   }));
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -17,6 +19,7 @@
   let animationFrame = 0;
   let scrubbing = false;
   let resumeAfterScrub = false;
+  let trackBounds = [];
 
   const formatTime = seconds => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
   const canSeek = () => Number.isFinite(video.duration) && video.duration > 0;
@@ -25,6 +28,8 @@
   function sync() {
     const time = Math.max(0, Math.min(duration, video.currentTime));
     let current = chapters[0];
+    let currentIndex = 0;
+    let currentProgress = 0;
     chapters.forEach((chapter, index) => {
       const end = chapterEnd(index);
       const progress = Math.max(0, Math.min(1, (time - chapter.start) / (end - chapter.start)));
@@ -32,11 +37,18 @@
       chapter.button.disabled = !canSeek();
       if (time >= chapter.start && (time < end || index === chapters.length - 1)) {
         current = chapter;
+        currentIndex = index;
+        currentProgress = progress;
         chapter.button.setAttribute('aria-current', 'step');
       } else {
         chapter.button.removeAttribute('aria-current');
       }
     });
+    const track = trackBounds[currentIndex];
+    if (track) {
+      timeline.style.setProperty('--playhead-x', `${track.left + track.width * currentProgress}px`);
+      timeline.style.setProperty('--playhead-y', `${track.centerY}px`);
+    }
     if (!scrubbing) scrubber.value = time;
     scrubber.disabled = !canSeek();
     scrubber.setAttribute('aria-valuetext', `${formatTime(time)} of ${formatTime(Math.ceil(duration))}, ${current.label}`);
@@ -45,11 +57,20 @@
     toggle.setAttribute('aria-label', `${video.paused ? 'Play' : 'Pause'} demo`);
   }
 
+  function measureTracks() {
+    const parent = timeline.getBoundingClientRect();
+    trackBounds = chapters.map(chapter => {
+      const rect = chapter.track.getBoundingClientRect();
+      return { left: rect.left - parent.left, width: rect.width, centerY: rect.top + rect.height / 2 - parent.top };
+    });
+  }
+
   function metadataLoaded() {
     if (!canSeek()) return;
     duration = video.duration;
     scrubber.max = duration;
     chapterList.style.setProperty('--chapter-tracks', chapters.map((chapter, index) => `minmax(44px, ${chapterEnd(index) - chapter.start}fr)`).join(' '));
+    measureTracks();
     chapters.forEach(chapter => chapter.button.setAttribute('aria-label', `${chapter.label}, jump to ${formatTime(chapter.start)}`));
     sync();
   }
@@ -76,11 +97,32 @@
     play();
   });
 
+  function seekFromPointer(event) {
+    const x = event.clientX - timeline.getBoundingClientRect().left;
+    let time = duration;
+    for (let index = 0; index < chapters.length; index++) {
+      const track = trackBounds[index];
+      if (x <= track.left + track.width) {
+        const progress = Math.max(0, Math.min(1, (x - track.left) / track.width));
+        time = chapters[index].start + progress * (chapterEnd(index) - chapters[index].start);
+        break;
+      }
+    }
+    scrubber.value = time;
+    seek(time);
+  }
+
   scrubber.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    scrubber.focus({ preventScroll: true });
     scrubbing = true;
     resumeAfterScrub = !video.paused;
     video.pause();
     scrubber.setPointerCapture(event.pointerId);
+    seekFromPointer(event);
+  });
+  scrubber.addEventListener('pointermove', event => {
+    if (scrubbing) seekFromPointer(event);
   });
   scrubber.addEventListener('input', () => seek(Number(scrubber.value)));
   function finishScrub() {
@@ -115,6 +157,11 @@
   reducedMotion.addEventListener('change', event => {
     if (event.matches) video.pause();
   });
+
+  new ResizeObserver(() => {
+    measureTracks();
+    sync();
+  }).observe(chapterList);
 
   video.controls = false;
   controls.hidden = false;
