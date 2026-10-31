@@ -177,13 +177,19 @@ final class AnnotationTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: key))
     }
 
+    @MainActor
     func testPermissionIsRequestedAgainAfterTCCResetEvenIfPreviousRequestWasRemembered() {
-        XCTAssertTrue(
-            ScreenCapturePermissionRequestPolicy.shouldRequest(
-                hasAccess: false,
-                hasRequestedBefore: true
-            )
-        )
+        let suite = "PointPermissionTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(true, forKey: "hasRequestedScreenCapturePermission")
+        var requests = 0
+        let permission = PermissionService(defaults: defaults, preflight: { false }, request: {
+            requests += 1
+            return false
+        })
+        XCTAssertEqual(permission.requestCaptureAccess(), .notGranted)
+        XCTAssertEqual(requests, 1)
     }
 
     func testTCCCaptureErrorIsRecognizedAsAuthorizationFailure() {

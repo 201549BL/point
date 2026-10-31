@@ -27,8 +27,10 @@ Download the latest notarized build from
 [GitHub Releases](../../releases/latest), unzip it, and move **Point.app** to your
 Applications folder. Point requires macOS 14 or later.
 
-On the first capture, macOS asks for Screen Recording access. Point uses this
-permission only to capture the region you select.
+On first launch, Point guides you through enabling Screen Recording access in
+macOS. Setup resumes after reopening Point if a restart is needed. You can
+finish later from **Finish Setup…** in the menu bar. Point takes screenshots
+when you start a capture and does not capture audio.
 
 ## Use Point
 
