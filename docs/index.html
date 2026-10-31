@@ -381,26 +381,64 @@
       background: #eef0f5;
     }
 
-    .video-toggle {
-      position: absolute;
-      right: 24px;
-      bottom: 24px;
-      z-index: 2;
-      min-width: 68px;
-      height: 36px;
-      padding: 0 14px;
-      border: 1px solid rgba(255,255,255,.72);
-      border-radius: 18px;
-      color: #34343d;
-      background: rgba(248,248,251,.74);
-      box-shadow: 0 8px 24px rgba(24,30,53,.18), inset 0 1px rgba(255,255,255,.84);
-      font: 650 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-      backdrop-filter: blur(20px) saturate(1.2);
+    .demo-controls { width: 100%; padding: 8px 14px 6px; }
+    .demo-controls[hidden] { display: none; }
+    .chapter-timeline { position: relative; }
+    .chapter-list { display: grid; grid-template-columns: var(--chapter-tracks, repeat(5, 1fr)); gap: 6px; }
+    .demo-chapter {
+      min-width: 0;
+      min-height: 54px;
+      padding: 10px 0 8px;
+      border: 0;
+      border-radius: 5px;
+      background: transparent;
+      color: #66616f;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      font-family: inherit;
       cursor: pointer;
     }
-
-    .video-toggle:hover { background: rgba(255,255,255,.88); }
-    .video-toggle:focus-visible { outline: 3px solid rgba(123,84,220,.32); outline-offset: 3px; }
+    .chapter-track { display: block; height: 4px; margin-bottom: 10px; overflow: hidden; border-radius: 4px; background: rgba(79, 56, 116, .13); }
+    .chapter-fill { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, #e9a28f, #8b67d1); transform: scaleX(var(--progress, 0)); transform-origin: left; }
+    .demo-chapter[aria-current="step"] { color: var(--accent-dark); font-weight: 750; }
+    .demo-chapter:hover { color: var(--accent-dark); }
+    .demo-scrub {
+      appearance: none;
+      -webkit-appearance: none;
+      position: absolute;
+      top: 0;
+      left: -6px;
+      width: calc(100% + 12px);
+      height: 24px;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+    .demo-scrub::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+    .demo-scrub::-moz-range-track, .demo-scrub::-moz-range-progress { height: 4px; background: transparent; }
+    .demo-scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 2px solid white; border-radius: 50%; background: var(--accent-dark); box-shadow: 0 1px 5px rgba(50,30,80,.25); opacity: 0; }
+    .demo-scrub::-moz-range-thumb { width: 8px; height: 8px; border: 2px solid white; border-radius: 50%; background: var(--accent-dark); opacity: 0; }
+    .chapter-timeline:hover .demo-scrub::-webkit-slider-thumb, .demo-scrub:focus-visible::-webkit-slider-thumb { opacity: 1; }
+    .chapter-timeline:hover .demo-scrub::-moz-range-thumb, .demo-scrub:focus-visible::-moz-range-thumb { opacity: 1; }
+    .demo-transport { display: flex; align-items: center; gap: 8px; padding-top: 2px; }
+    .demo-transport button {
+      min-height: 36px;
+      min-width: 66px;
+      padding: 0 12px;
+      border: 1px solid rgba(112,89,147,.14);
+      border-radius: 18px;
+      background: rgba(255,255,255,.58);
+      color: #45404e;
+      font: 650 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      cursor: pointer;
+    }
+    .demo-transport button:hover { background: rgba(255,255,255,.95); }
+    .demo-clock { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .demo-controls :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .demo-scrub:disabled { cursor: wait; }
+    .demo-fallback { padding: 0 14px; font-size: 13px; color: var(--muted); }
 
     .features {
       display: grid;
@@ -441,7 +479,9 @@
       .demo { min-height: 500px; border-radius: 26px; }
       .video-demo { min-height: 0; padding: 6px; border-radius: 24px; }
       .video-demo video { border-radius: 18px; }
-      .video-toggle { right: 16px; bottom: 16px; }
+      .demo-controls { padding: 6px 8px; }
+      .demo-chapter { font-size: 11px; }
+      .demo-transport button { min-width: 60px; padding: 0 10px; }
       .glass-frame { width: 91%; padding: 9px; border-radius: 23px; }
       .shot { min-height: 330px; border-radius: 14px; }
       .shot-content { padding: 44px 30px 70px; }
@@ -450,6 +490,12 @@
       .toolbar { bottom: 29px; transform: translateX(-50%) scale(.72); transform-origin: bottom center; }
       .features { grid-template-columns: 1fr; padding-bottom: 70px; }
       footer { flex-direction: column; }
+    }
+
+    @media (max-width: 420px) {
+      .chapter-list { gap: 4px; }
+      .demo-chapter { font-size: 10px; }
+      .demo-clock { font-size: 11px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -478,11 +524,28 @@
 
       <section class="demo-wrap" aria-label="Point screenshot annotation preview">
         <div class="demo video-demo">
-          <video autoplay muted loop playsinline preload="metadata" poster="point-demo-poster.jpg" aria-label="A three-finger double-tap starts a capture. Point frames it on the wallpaper, adds an arrow with a caption, blurs an email, redacts an API key, copies it, and the screenshot is pasted into a team chat.">
-            <source src="point-demo.mp4" type="video/mp4">
-            <a href="point-demo.mp4">Watch the Point demo video</a>
+          <video id="point-demo" controls muted loop playsinline preload="metadata" width="1920" height="1206" poster="point-demo-poster.jpg?v=030-chapters" aria-label="Point demo: capture with a Sunset wash, frame and annotate a screenshot, blur an email, redact a key, preview the result, and share it in chat.">
+            <source src="point-demo.mp4?v=030-chapters" type="video/mp4">
+            <a href="point-demo.mp4?v=030-chapters">Watch the Point demo video</a>
           </video>
-          <button class="video-toggle" type="button" aria-label="Pause demo video">Pause</button>
+          <div class="demo-controls" hidden>
+            <div class="chapter-timeline">
+              <div class="chapter-list" role="group" aria-label="Demo chapters">
+                <button class="demo-chapter" type="button" data-start="0" aria-controls="point-demo"><span class="chapter-track" aria-hidden="true"><span class="chapter-fill"></span></span>Capture</button>
+                <button class="demo-chapter" type="button" data-start="9.366667" aria-controls="point-demo"><span class="chapter-track" aria-hidden="true"><span class="chapter-fill"></span></span>Annotate</button>
+                <button class="demo-chapter" type="button" data-start="18.133333" aria-controls="point-demo"><span class="chapter-track" aria-hidden="true"><span class="chapter-fill"></span></span>Protect</button>
+                <button class="demo-chapter" type="button" data-start="25.433333" aria-controls="point-demo"><span class="chapter-track" aria-hidden="true"><span class="chapter-fill"></span></span>Preview</button>
+                <button class="demo-chapter" type="button" data-start="31.7" aria-controls="point-demo"><span class="chapter-track" aria-hidden="true"><span class="chapter-fill"></span></span>Share</button>
+              </div>
+              <input class="demo-scrub" type="range" min="0" max="40.733333" step="0.01" value="0" aria-label="Seek demo" aria-controls="point-demo" disabled>
+            </div>
+            <div class="demo-transport">
+              <button class="video-toggle" type="button" aria-label="Play demo">Play</button>
+              <button class="video-replay" type="button" aria-label="Replay demo">Replay</button>
+              <output class="demo-clock" aria-hidden="true">0:00 / 0:41</output>
+            </div>
+          </div>
+          <p class="demo-fallback" hidden>Having trouble playing the demo? <a href="point-demo.mp4?v=030-chapters">Open the video directly.</a></p>
         </div>
       </section>
 
@@ -510,24 +573,6 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
-  <script>
-    const demoVideo = document.querySelector('.video-demo video');
-    const demoToggle = document.querySelector('.video-toggle');
-    const setDemoButton = () => {
-      const paused = demoVideo.paused;
-      demoToggle.textContent = paused ? 'Play' : 'Pause';
-      demoToggle.setAttribute('aria-label', `${paused ? 'Play' : 'Pause'} demo video`);
-    };
-    demoToggle?.addEventListener('click', () => {
-      if (demoVideo.paused) demoVideo.play(); else demoVideo.pause();
-    });
-    demoVideo?.addEventListener('play', setDemoButton);
-    demoVideo?.addEventListener('pause', setDemoButton);
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      demoVideo?.pause();
-      demoVideo?.removeAttribute('autoplay');
-      setDemoButton();
-    }
-  </script>
+  <script src="demo-player.js?v=030-chapters"></script>
 </body>
 </html>
