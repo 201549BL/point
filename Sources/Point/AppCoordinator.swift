@@ -5,6 +5,9 @@ import UniformTypeIdentifiers
 final class AppCoordinator {
     private let captureService = ScreenCaptureService()
     private let permissionService = PermissionService()
+    private lazy var onboardingProgress = OnboardingProgress(hasCaptureAccess: permissionService.hasCaptureAccess)
+    private lazy var onboarding = OnboardingController(progress: onboardingProgress, permission: permissionService)
+    private var isOnboardingCapture = false
     private let shortcutService = ShortcutService()
     private let trackpadShortcutService = TrackpadShortcutService()
     private let preferencesController = PreferencesController()
@@ -22,6 +25,7 @@ final class AppCoordinator {
         keyEquivalent: ""
     )
     private lazy var shortcutInfoItem = NSMenuItem(title: "Shortcut: \(ShortcutChoice.preferred.title)", action: nil, keyEquivalent: "")
+    private lazy var setupItem = NSMenuItem(title: "Finish Setup…", action: #selector(showSetup), keyEquivalent: "")
 
     func start() {
         showNormalStatusIcon()
@@ -30,6 +34,9 @@ final class AppCoordinator {
         captureItem.target = self
         menu.addItem(captureItem)
         menu.addItem(shortcutInfoItem)
+        setupItem.target = self
+        setupItem.isHidden = onboardingProgress.isComplete
+        menu.addItem(setupItem)
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -54,10 +61,14 @@ final class AppCoordinator {
             }
         } catch {
             captureItem.title = "Capture Region (shortcut unavailable)"
-            showError(
-                title: "Shortcut unavailable",
-                message: "\(ShortcutChoice.preferred.title) is already registered by another app. You can still capture from the Point menu."
-            )
+            if onboardingProgress.isComplete {
+                showError(
+                    title: "Shortcut unavailable",
+                    message: "\(ShortcutChoice.preferred.title) is already registered by another app. You can still capture from the Point menu."
+                )
+            } else {
+                onboarding.model.message = "\(ShortcutChoice.preferred.title) is in use by another app. You can capture from the Point menu or choose another shortcut in Settings."
+            }
         }
         trackpadShortcutService.setEnabled(TrackpadShortcutPreference.isEnabled) { [weak self] in
             self?.beginCapture()
@@ -86,6 +97,20 @@ final class AppCoordinator {
         preferencesController.onBorderColorChange = { [weak self] color in
             self?.annotationController?.updateBorderColor(color)
         }
+        onboarding.model.onFinish = { [weak self] in
+            self?.onboarding.hide()
+            self?.setupItem.isHidden = true
+        }
+        onboarding.model.onTryCapture = { [weak self] in
+            self?.beginCapture()
+        }
+        if !onboardingProgress.isComplete {
+            showSetup()
+        }
+    }
+
+    @objc private func showSetup() {
+        onboarding.show(shortcut: shortcutService.registeredChoice?.title)
     }
 
     @objc private func beginCaptureFromMenu() {
@@ -107,6 +132,21 @@ final class AppCoordinator {
         }
         guard captureTask == nil else { return }
         guard previewController?.isSaving != true, previewController?.isDragging != true else { return }
+        if !onboardingProgress.isComplete {
+            guard onboarding.model.page == .ready else {
+                showSetup()
+                return
+            }
+            // The shortcut and menu command also start the optional practice capture.
+            onboarding.hide()
+            isOnboardingCapture = true
+        }
+        guard permissionService.hasCaptureAccess else {
+            isOnboardingCapture = false
+            setupItem.isHidden = false
+            onboarding.showPermissionRecovery(shortcut: shortcutService.registeredChoice?.title)
+            return
+        }
         previewController?.dismiss()
         previewController = nil
         confirmationController?.dismiss()
@@ -118,8 +158,6 @@ final class AppCoordinator {
         captureTask = Task { [weak self] in
             guard let self else { return }
             defer { captureTask = nil }
-
-            guard permissionService.ensureCapturePermission() else { return }
 
             do {
                 let snapshots = try await captureService.captureConnectedDisplays()
@@ -143,6 +181,19 @@ final class AppCoordinator {
             DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
                 self?.showNormalStatusIcon()
             }
+            isOnboardingCapture = false
+            setupItem.isHidden = false
+            // Update behind the macOS authorization sheet without activating a
+            // Point modal. The user can explicitly resume from the menu bar.
+            onboardingProgress.advance(to: .screenAccess)
+            onboarding.model.page = .settings
+            onboarding.model.message = "Respond to the macOS permission prompt, then choose Finish Setup from the Point menu."
+            return
+        }
+        if isOnboardingCapture {
+            isOnboardingCapture = false
+            showSetup()
+            onboarding.model.message = "Couldn’t take a screenshot: \(error.localizedDescription)"
             return
         }
         showError(title: "Capture failed", message: error.localizedDescription)
@@ -169,13 +220,14 @@ final class AppCoordinator {
                     frame: canvasFrame
                 )
             } catch {
-                showError(title: "Couldn’t prepare capture", message: error.localizedDescription)
+                handleCaptureError(error)
             }
         }
         controller.onCancel = { [weak self] in
             self?.overlayController?.dismiss()
             self?.overlayController = nil
             self?.restorePreviousApplication()
+            self?.resumeSetupAfterCancelledCapture()
         }
         overlayController = controller
         controller.present()
@@ -196,6 +248,7 @@ final class AppCoordinator {
                 showSuccessStatus(text: "Copied to clipboard")
                 showPreview(image: renderedImage, near: frame)
                 restorePreviousApplication()
+                finishSetupAfterCapture()
             } catch {
                 showError(title: "Couldn’t copy capture", message: error.localizedDescription)
             }
@@ -207,6 +260,7 @@ final class AppCoordinator {
             self?.annotationController?.dismiss()
             self?.annotationController = nil
             self?.restorePreviousApplication()
+            self?.resumeSetupAfterCancelledCapture()
         }
         controller.onError = { [weak self] error in
             self?.showError(title: "Couldn’t render capture", message: error.localizedDescription)
@@ -216,6 +270,19 @@ final class AppCoordinator {
         }
         annotationController = controller
         controller.present()
+    }
+
+    private func finishSetupAfterCapture() {
+        guard isOnboardingCapture else { return }
+        isOnboardingCapture = false
+        onboardingProgress.advance(to: .complete)
+        setupItem.isHidden = true
+    }
+
+    private func resumeSetupAfterCancelledCapture() {
+        guard isOnboardingCapture else { return }
+        isOnboardingCapture = false
+        showSetup()
     }
 
     private func restorePreviousApplication() {
@@ -264,6 +331,7 @@ final class AppCoordinator {
             try data.write(to: url, options: .atomic)
             if presenter == nil {
                 showConfirmation(text: "Screenshot saved", near: captureFrame, duration: 2)
+                finishSetupAfterCapture()
             }
             return url
         } catch {

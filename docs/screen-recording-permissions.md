@@ -10,11 +10,13 @@ If Settings shows Point enabled but captures ask for permission again or fail:
 1. Run `Scripts/install-local.sh --repair-permissions` from this repository.
    It builds with the release signing identity, stops the installed app, installs
    the verified build, resets **only Point's Screen Recording grant**, and reopens it.
-2. Start a capture. Allow Point in System Settings → Privacy & Security →
+2. Open **Finish Setup…** from Point’s menu bar, then choose **Allow Screen
+   Access…**. Allow Point in System Settings → Privacy & Security →
    Screen & System Audio Recording. macOS controls this approval.
-3. If macOS asks to quit Point, accept, then reopen `/Applications/Point.app`.
-   If Point offers **Quit & Reopen**, that button waits for its process to exit
-   before reopening the same bundle.
+3. Choose **Quit & Reopen** in the macOS dialog. Point explicitly accepts the
+   system’s quit request and resumes unfinished setup on launch. If you chose
+   **Later**, setup also offers **Already enabled? Quit & Reopen**; this fallback
+   waits for Point’s process to exit before reopening the same bundle.
 4. Capture, press Return, and paste. Run a normal local install once more and
    confirm a second capture succeeds without granting access again.
 
@@ -71,6 +73,42 @@ as an observed duplicate process in this session.
   **Quit & Reopen** does. Old persistent markers are discarded at startup.
 
 ## Verification
+
+First-time installs show guided setup without requesting permission until the
+user chooses **Allow Screen Access…**. Setup saves its position before handing
+off to macOS or reopening Point. On returning, it checks live permission and
+verifies the capture path before showing **You’re ready to Point**. Verification
+images are discarded in memory without copying or saving. A failed verification
+waits for an explicit retry rather than repeatedly triggering system prompts.
+
+Closing setup leaves **Finish Setup…** in the menu bar. **Done**, or successfully
+copying or saving a practice screenshot, completes setup. Cancelling the practice
+capture returns to the ready screen. Existing installs with capture access skip
+the tour; revoked access leads back to setup. Opening Settings and closing setup
+never schedule an automatic relaunch.
+
+For manual first-install validation, use a fresh macOS user or a fresh install
+without an existing Point grant. Test declining, granting, switching back from
+Settings, both macOS-managed and Point-managed reopening, closing and resuming
+setup, and cancelling then completing a practice capture. Do not reset the
+permission on a working installation just to replay the tour.
+
+### Native Quit & Reopen validation (2026-10-31)
+
+An earlier permission-dialog attempt quit Point without reopening it. Temporary
+diagnostics recorded the native quit Apple event from
+`com.apple.settings.PrivacySecurity.extension`. With an explicit
+`applicationShouldTerminate` reply of `.terminateNow`, the diagnostic build
+reopened and resumed setup. The diagnostics were then removed, retaining only
+that reply and restoring the instructions to choose macOS’s **Quit & Reopen**.
+
+The installed clean build was tested again with the user granting access and
+clicking the native button. An independent process observer confirmed old PID
+64836 exited, new PID 64912 launched, and saved setup reached `ready`. The user
+also confirmed reopening and resumed setup. No Point relaunch helper or external
+reopening command was used during either native-button test. These checks verify
+the current flow; they do not establish whether the explicit delegate reply alone
+explains the original failure. Normal quitting still never schedules a relaunch.
 
 ```sh
 swift test

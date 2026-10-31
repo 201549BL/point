@@ -22,4 +22,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator = AppCoordinator()
         coordinator?.start()
     }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        return .terminateNow
+    }
 }

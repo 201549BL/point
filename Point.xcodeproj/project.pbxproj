@@ -21,6 +21,9 @@
 		10000000000000000000010D /* TrackpadShortcutService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000020D /* TrackpadShortcutService.swift */; };
 		10000000000000000000010F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10000000000000000000020F /* Assets.xcassets */; };
 		100000000000000000000110 /* CapturePreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000210 /* CapturePreviewController.swift */; };
+		100000000000000000000111 /* OnboardingProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000211 /* OnboardingProgress.swift */; };
+		100000000000000000000112 /* OnboardingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000212 /* OnboardingController.swift */; };
+		100000000000000000000113 /* SunsetWash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000213 /* SunsetWash.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +43,9 @@
 		10000000000000000000020D /* TrackpadShortcutService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackpadShortcutService.swift; sourceTree = "<group>"; };
 		10000000000000000000020F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		100000000000000000000210 /* CapturePreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturePreviewController.swift; sourceTree = "<group>"; };
+		100000000000000000000211 /* OnboardingProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgress.swift; sourceTree = "<group>"; };
+		100000000000000000000212 /* OnboardingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingController.swift; sourceTree = "<group>"; };
+		100000000000000000000213 /* SunsetWash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SunsetWash.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +78,9 @@
 				100000000000000000000210 /* CapturePreviewController.swift */,
 				100000000000000000000205 /* ClipboardWriter.swift */,
 				100000000000000000000206 /* DisplayOverlayController.swift */,
+				100000000000000000000213 /* SunsetWash.swift */,
+				100000000000000000000211 /* OnboardingProgress.swift */,
+				100000000000000000000212 /* OnboardingController.swift */,
 				100000000000000000000207 /* PermissionService.swift */,
 				100000000000000000000208 /* PointApp.swift */,
 				100000000000000000000209 /* PreferencesController.swift */,
@@ -175,6 +184,9 @@
 				100000000000000000000110 /* CapturePreviewController.swift in Sources */,
 				100000000000000000000105 /* ClipboardWriter.swift in Sources */,
 				100000000000000000000106 /* DisplayOverlayController.swift in Sources */,
+				100000000000000000000113 /* SunsetWash.swift in Sources */,
+				100000000000000000000111 /* OnboardingProgress.swift in Sources */,
+				100000000000000000000112 /* OnboardingController.swift in Sources */,
 				100000000000000000000107 /* PermissionService.swift in Sources */,
 				100000000000000000000108 /* PointApp.swift in Sources */,
 				100000000000000000000109 /* PreferencesController.swift in Sources */,
@@ -214,7 +226,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = DNPD2D9266;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -223,7 +235,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.3.0;
 				POINT_DISPLAY_NAME = "Point Dev";
 				PRODUCT_BUNDLE_IDENTIFIER = com.eirikbjorndal.point.dev;
 				PRODUCT_NAME = "Point Dev";
@@ -236,7 +248,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = DNPD2D9266;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -245,7 +257,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.3.0;
 				POINT_DISPLAY_NAME = Point;
 				PRODUCT_BUNDLE_IDENTIFIER = com.eirikbjorndal.point;
 				PRODUCT_NAME = "$(TARGET_NAME)";
