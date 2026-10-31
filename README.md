@@ -61,7 +61,14 @@ Selected text and captions have direct handles for changing width and font size.
 
 Choose **Settings…** from the Point menu to customize the global shortcut,
 trackpad gesture, annotation and border colors, arrow size, text size, and
-backdrop.
+backdrop. Choose **Color mood** from Sunset (peach and violet), Lagoon (mint and
+teal), or Twilight (blue and purple). The wash automatically softens in dark
+mode and stays outside the clear selected region while dragging. Use **Overlay strength** to adjust its
+intensity from 0–100%; the default is 45% and your choice is remembered across
+launches. A crosshair and capture hint indicate readiness immediately, and
+dimensions follow the dragged corner. Reduce Motion skips the entrance fade.
+The screen freezes when capture starts. Selection and the finished screenshot
+use that same frame, so video cannot advance while you choose a region.
 
 ## Develop
 
