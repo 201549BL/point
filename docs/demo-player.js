@@ -2,6 +2,7 @@
   const player = document.querySelector('.video-demo');
   const video = player.querySelector('video');
   const starter = player.querySelector('.demo-start');
+  if (!starter) return;
   const controls = player.querySelector('.demo-controls');
   const toggle = player.querySelector('.video-toggle');
   const replay = player.querySelector('.video-replay');
