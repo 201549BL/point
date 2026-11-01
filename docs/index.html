@@ -374,16 +374,31 @@
     .video-demo::after { display: none; }
 
     .demo-stage { position: relative; }
+    .demo-stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      border-radius: 25px;
+      background: rgba(255, 255, 255, .38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+    .is-awaiting-play .demo-stage::after { opacity: 1; }
+    .is-awaiting-play video { filter: saturate(.4); }
     .video-demo video {
       width: 100%;
       height: auto;
       display: block;
       border-radius: 25px;
       background: #eef0f5;
+      transition: filter 250ms ease;
     }
 
     .demo-start {
       position: absolute;
+      z-index: 2;
       top: 50%;
       left: 50%;
       translate: -50% -50%;
@@ -512,7 +527,7 @@
       h1 { font-size: clamp(48px, 15vw, 68px); }
       .demo { min-height: 500px; border-radius: 26px; }
       .video-demo { min-height: 0; padding: 6px; border-radius: 24px; }
-      .video-demo video { border-radius: 18px; }
+      .video-demo video, .demo-stage::after { border-radius: 18px; }
       .demo-controls { padding: 6px 8px; }
       .demo-chapter { font-size: 11px; }
       .demo-transport button { min-width: 60px; padding: 0 10px; }
@@ -536,7 +551,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
-      .button { transition: none; }
+      .button, .video-demo video, .demo-stage::after { transition: none; }
     }
   </style>
 </head>
@@ -620,6 +635,6 @@
       <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
     </footer>
   </div>
-  <script src="demo-player.js?v=030-watch-demo-2"></script>
+  <script src="demo-player.js?v=030-quiet-poster-1"></script>
 </body>
 </html>

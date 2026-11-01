@@ -155,6 +155,10 @@
   video.addEventListener('playing', () => {
     const moveFocus = document.activeElement === starter;
     starter.hidden = true;
+    player.classList.remove('is-awaiting-play');
+    controls.hidden = false;
+    measureTracks();
+    sync();
     if (moveFocus) toggle.focus({ preventScroll: true });
   }, { once: true });
   video.addEventListener('play', () => {
@@ -169,6 +173,7 @@
     cancelAnimationFrame(animationFrame);
     starter.hidden = true;
     controls.hidden = true;
+    player.classList.remove('is-awaiting-play');
     video.controls = true;
     player.querySelector('.demo-fallback').hidden = false;
   });
@@ -183,7 +188,7 @@
 
   video.controls = false;
   starter.hidden = false;
-  controls.hidden = false;
+  player.classList.add('is-awaiting-play');
   metadataLoaded();
   sync();
 })();
