@@ -1,0 +1,226 @@
+.point-annotation-dock,
+.point-annotation-status {
+  position: fixed;
+  z-index: 2147483001;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+}
+.point-annotation-invitation {
+  margin: 16px auto 0;
+  max-width: 100%;
+  text-align: center;
+}
+.point-annotation-invitation p {
+  margin: 4px 0 0;
+  color: #666773;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.point-annotate-launch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 42px;
+  max-width: 100%;
+  padding: 8px 13px;
+  border: 1px solid rgba(29, 29, 36, .15);
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .42);
+  color: #4d4c58;
+  font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  cursor: pointer;
+}
+.point-annotate-launch .point-annotation-icon { width: 18px; height: 18px; margin: 0; }
+.point-annotate-launch:hover:not(:disabled) { border-color: rgba(99, 58, 200, .35); color: #633ac8; }
+.point-annotate-launch:disabled { opacity: .6; cursor: default; }
+.point-annotation-dock {
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 20px);
+}
+.point-annotation-overlay {
+  position: absolute;
+  z-index: 2147483000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+}
+.point-annotation-surface {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.point-annotation-concealments,
+.point-annotation-arrows,
+.point-annotation-captions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.point-annotation-arrows { overflow: hidden; }
+.point-annotation-capturing .point-annotation-arrows,
+.point-annotation-capturing .point-annotation-concealments,
+.point-annotation-capturing .point-annotation-captions { display: none; }
+.point-annotation-arrows path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.point-annotation-arrow-hit {
+  stroke: transparent;
+  stroke-width: 16;
+  pointer-events: stroke;
+  touch-action: none;
+}
+.point-annotation-arrows [data-handle],
+.point-annotation-rectangle,
+.point-annotation-captions .point-annotation-caption {
+  pointer-events: auto;
+  touch-action: none;
+}
+.point-annotation-active :where(body *) { touch-action: none; }
+.point-annotation-active :is(a, button, input, select, textarea, video, audio, summary, label, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="slider"]),
+.point-annotation-active :is(a, button, input, select, textarea, video, audio, summary, label, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="slider"]) *,
+.point-annotation-active :has(:is(a, button, input, select, textarea, video, audio, summary, label, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="slider"])) { touch-action: auto; }
+.point-annotation-dragging,
+.point-annotation-dragging * { -webkit-user-select: none; user-select: none; }
+.point-annotation-hover,
+.point-annotation-hover * { cursor: var(--point-annotation-cursor) !important; }
+.point-annotation-arrow-shadow { stroke: rgba(0, 0, 0, .62); stroke-width: 7; }
+.point-annotation-arrow { stroke: #0a7aff; stroke-width: 4; }
+.point-annotation-selection {
+  fill: none;
+  stroke: #0a7aff;
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, .9));
+}
+.point-annotation-rectangle { position: absolute; }
+.point-annotation-redaction { background: #000; }
+.point-annotation-caption {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  border: 2.5px solid #0a7aff;
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: rgba(0, 0, 0, .72);
+  color: white;
+  font: 600 15px/18px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.point-annotation-caption-editor {
+  pointer-events: auto;
+  resize: none;
+  outline: none;
+  overflow: auto;
+  min-height: 30px;
+}
+.point-annotation-caption-editor::placeholder { color: rgba(255, 255, 255, .55); }
+.point-annotation-toolbar {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 28px;
+  background: rgba(248, 249, 252, .82);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  backdrop-filter: blur(28px) saturate(1.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .2), inset 0 1px 0 white;
+}
+.point-annotation-toolbar button {
+  flex: 0 0 auto;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #303442;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.point-annotation-tools,
+.point-annotation-actions { display: flex; align-items: center; gap: 2px; }
+.point-annotation-actions { flex-wrap: wrap; justify-content: center; max-width: 100%; border-left: 1px solid rgba(45, 50, 65, .16); padding-left: 6px; }
+.point-annotation-actions button { border-radius: 22px; }
+.point-annotation-tool { display: grid; place-items: center; }
+.point-annotation-icon {
+  display: block;
+  width: 21px;
+  height: 21px;
+  margin: auto;
+  background: currentColor;
+  -webkit-mask: var(--point-icon) center / contain no-repeat;
+  mask: var(--point-icon) center / contain no-repeat;
+}
+.point-annotation-toolbar button:hover:not(:disabled) { background: rgba(48, 70, 110, .09); }
+.point-annotation-toolbar .point-annotation-tool[aria-pressed="true"] {
+  color: #0a7aff;
+  background: rgba(10, 122, 255, .14);
+  box-shadow: inset 0 0 0 1px rgba(10, 122, 255, .16);
+}
+.point-annotation-toolbar button:disabled { opacity: .32; cursor: default; }
+.point-annotation-toolbar .point-annotation-clear { color: #fff; background: #0a7aff; border-radius: 22px; padding: 8px 13px; }
+.point-annotation-toolbar button.point-annotation-clear:hover { background: #066cde; }
+.point-annotation-toolbar button:focus-visible,
+.point-annotate-launch:focus-visible { outline: 3px solid #0a7aff; outline-offset: 3px; }
+.point-annotation-status {
+  top: max(68px, calc(env(safe-area-inset-top) + 54px));
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(25, 29, 38, .92);
+  color: white;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+}
+.point-annotation-toolbar[hidden],
+.point-annotation-dock[hidden],
+.point-annotation-overlay[hidden],
+.point-annotate-launch[hidden],
+.point-annotation-status[hidden] { display: none; }
+@media (max-width: 520px) {
+  .point-annotation-toolbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; width: 278px; padding: 6px; border-radius: 25px; }
+  .point-annotation-tools,
+  .point-annotation-actions { display: contents; }
+  .point-annotation-tool,
+  .point-annotation-actions [data-action="undo"],
+  .point-annotation-actions [data-action="redo"] { grid-row: 1; }
+  .point-annotation-actions [data-action="clear all"] { grid-column: span 4; }
+}
+
+.point-annotation-dock:not([hidden]) .point-annotation-toolbar {
+  animation: point-annotation-toolbar-in 450ms cubic-bezier(.22, .8, .3, 1) backwards;
+}
+@keyframes point-annotation-toolbar-in {
+  0% { opacity: 0; transform: translateY(14px) scale(.94); filter: blur(5px); }
+  65% { opacity: 1; transform: translateY(-3px) scale(1.018); filter: blur(0); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .point-annotation-dock:not([hidden]) .point-annotation-toolbar { animation: none; }
+}

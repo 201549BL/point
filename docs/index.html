@@ -16,6 +16,7 @@
   <meta name="twitter:description" content="A tiny, tactile screenshot and annotation tool made for macOS.">
   <meta name="twitter:image" content="https://201549bl.github.io/point/og.png">
   <link rel="icon" href="app-icon.png">
+  <link rel="stylesheet" href="annotation-tools.css">
   <style>
     :root {
       color-scheme: light;
@@ -71,6 +72,20 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(43, 35, 64, .12);
     }
+
+    .nav-link, footer a {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .link-icon {
+      width: 18px;
+      height: 18px;
+      flex: none;
+    }
+
+    img.link-icon { height: auto; }
 
     .nav-link {
       color: #51515c;
@@ -559,7 +574,7 @@
   <div class="shell">
     <nav aria-label="Primary navigation">
       <a class="brand" href="#top"><img src="app-icon.png" alt=""> Point</a>
-      <a class="nav-link" href="https://github.com/201549BL/point">View on GitHub ↗</a>
+      <a class="nav-link" href="https://github.com/201549BL/point">View on GitHub <img class="link-icon" src="icons/github-mark.svg" width="18" alt="" aria-hidden="true"></a>
     </nav>
 
     <main id="top">
@@ -568,8 +583,8 @@
         <h1>Beautiful screenshots, instantly.</h1>
         <p class="lede">Point is a tiny, tactile screenshot tool for capturing, annotating, and framing the moment—without breaking your flow.</p>
         <div class="actions">
-          <a class="button primary" href="https://github.com/201549BL/point/releases/download/v0.3.0/Point-0.3.0-macOS.zip">Download for macOS&nbsp; ↓</a>
-          <a class="button" href="https://github.com/201549BL/point">Source on GitHub&nbsp; ↗</a>
+          <a class="button primary" href="https://github.com/201549BL/point/releases/download/v0.3.0/Point-0.3.0-macOS.zip">Download for macOS <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></svg></a>
+          <a class="button" href="https://github.com/201549BL/point">Source on GitHub <img class="link-icon" src="icons/github-mark.svg" width="18" alt="" aria-hidden="true"></a>
         </div>
       </section>
 
@@ -632,9 +647,11 @@
 
     <footer>
       <span>Point is free and built for macOS 14 or later.</span>
-      <a href="https://github.com/201549BL/point/releases/latest">Latest release ↗</a>
+      <a href="https://github.com/201549BL/point/releases/latest">Latest release <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13 11 22 2 13V3h10l8 8a1.4 1.4 0 0 1 0 2Z"/><circle cx="7" cy="8" r="1.25"/></svg></a>
     </footer>
   </div>
   <script src="demo-player.js?v=030-quiet-poster-2"></script>
+  <script src="annotation-mosaic.js" defer></script>
+  <script src="annotation-tools.js" defer></script>
 </body>
 </html>
