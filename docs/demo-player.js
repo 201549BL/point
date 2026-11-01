@@ -188,6 +188,7 @@
 
   video.controls = false;
   starter.hidden = false;
+  controls.hidden = false;
   player.classList.add('is-awaiting-play');
   metadataLoaded();
   sync();
