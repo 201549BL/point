@@ -38,20 +38,27 @@
     const width = Math.max(root.clientWidth, root.scrollWidth, body.scrollWidth);
     const height = Math.max(root.clientHeight, root.scrollHeight, body.scrollHeight);
     const scale = Math.min(window.devicePixelRatio || 1, 2);
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
     const canvas = await renderer(root, {
       width,
       height,
       x: 0,
       y: 0,
       scale,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
+      scrollX,
+      scrollY,
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       logging: false,
       allowTaint: false,
       useCORS: false,
       ignoreElements: (element) => element.hasAttribute("data-html2canvas-ignore"),
+      onclone: (clonedDocument) => {
+        // Sampling needs the cloned scroll position to settle before layout is measured.
+        clonedDocument.documentElement.style.scrollBehavior = "auto";
+        clonedDocument.defaultView.scrollTo(scrollX, scrollY);
+      },
     });
     canvas.getContext("2d").getImageData(0, 0, 1, 1);
     return { canvas, scale, width, height };
