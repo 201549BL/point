@@ -1,0 +1,80 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Point annotation capture regression tests</title>
+<style>
+  body { margin: 0; min-height: 1400px; background: radial-gradient(circle at 80px 100px, rgba(206,185,255,.8), transparent 220px), #f7f8fb; }
+  video { position: absolute; left: 350px; top: 80px; width: 160px; height: 100px; border-radius: 20px; }
+  #result { position: absolute; top: 500px; }
+</style>
+<video muted playsinline></video>
+<pre id="result" data-html2canvas-ignore>Running…</pre>
+<script src="../docs/annotation-mosaic.js"></script>
+<script>
+  // Serve the repository root, then open /Tests/WebAnnotationCaptureTests.html.
+  window.testResult = (async () => {
+    const assert = (condition, message) => { if (!condition) throw new Error(message); };
+    const near = (actual, expected, label) => assert(actual.every((value, i) => Math.abs(value - expected[i]) <= 2), `${label}: ${actual} != ${expected}`);
+    const pixel = (canvas, x, y) => [...canvas.getContext('2d').getImageData(x, y, 1, 1).data];
+    const frame = document.createElement('canvas');
+    frame.width = 160;
+    frame.height = 100;
+    const paint = color => { const ctx = frame.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0, 0, 160, 100); };
+    paint('#e02060');
+    const video = document.querySelector('video');
+    const stream = frame.captureStream(0);
+    video.srcObject = stream;
+    await video.play();
+    let frameNumber = 0;
+    const nextFrame = () => new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Video frame timeout')), 5000);
+      video.requestVideoFrameCallback(() => { clearTimeout(timeout); resolve(); });
+      const context = frame.getContext('2d');
+      context.fillStyle = `rgb(${++frameNumber}, 0, 0)`;
+      context.fillRect(0, 0, 1, 1);
+      stream.getVideoTracks()[0].requestFrame();
+    });
+    await nextFrame();
+    const source = await PointMosaic.capture();
+    const scale = source.scale;
+    const expected = document.createElement('canvas');
+    expected.width = 300;
+    expected.height = 400;
+    const context = expected.getContext('2d');
+    context.fillStyle = '#f7f8fb';
+    context.fillRect(0, 0, 300, 400);
+    const gradient = context.createRadialGradient(80, 100, 0, 80, 100, 220);
+    gradient.addColorStop(0, 'rgba(206,185,255,.8)');
+    gradient.addColorStop(1, 'rgba(206,185,255,0)');
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 300, 400);
+    for (const [x, y] of [[80, 100], [180, 100], [80, 250]]) {
+      near(pixel(source.canvas, x * scale, y * scale), pixel(expected, x, y), 'Gradient color');
+    }
+    near(pixel(source.canvas, 430 * scale, 130 * scale), [224, 32, 96, 255], 'Captured video frame');
+    const target = document.createElement('canvas');
+    const rect = {x: 390, y: 100, width: 80, height: 60};
+    PointMosaic.render(target, source, rect, 'video-test');
+    near(pixel(target, 40 * scale, 30 * scale), [224, 32, 96, 255], 'Initial mosaic video color');
+    paint('#2080e0');
+    await nextFrame();
+    await nextFrame();
+    PointMosaic.render(target, source, rect, 'video-test');
+    near(pixel(target, 40 * scale, 30 * scale), [32, 128, 224, 255], 'Mosaic follows the new video frame');
+    const corner = {x: 350, y: 80, width: 4, height: 4};
+    PointMosaic.render(target, source, corner, 'corner-test');
+    near(pixel(target, 0, 0), pixel(source.canvas, 350 * scale, 80 * scale), 'Rounded video corner preserves the page');
+    scrollTo({top: 600, behavior: 'instant'});
+    const scrolled = await PointMosaic.capture();
+    near(pixel(scrolled.canvas, 80 * scale, 100 * scale), pixel(expected, 80, 100), 'Scrolled capture preserves document coordinates');
+    assert(scrolled.videos[0].y === 80, 'Video stays in document coordinates after scrolling');
+    video.pause();
+    stream.getTracks().forEach(track => track.stop());
+    return {passed: true, checks: ['gradient colors', 'embedded video capture', 'live mosaic frames', 'rounded corners', 'scroll coordinates']};
+  })().then(result => {
+    document.querySelector('#result').textContent = JSON.stringify(result, null, 2);
+    return result;
+  }).catch(error => {
+    document.querySelector('#result').textContent = error.stack;
+    return {passed: false, error: error.message};
+  });
+</script>

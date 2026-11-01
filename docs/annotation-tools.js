@@ -16,7 +16,8 @@
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const mosaicCache = new Map();
-  let pausedVideos = [];
+  let videoFrame = 0;
+  let lastVideoRefresh = 0;
   const hitContext = document.createElement('canvas').getContext('2d');
 
   const activate = document.createElement('button');
@@ -167,6 +168,7 @@
       state.undo = [];
       state.redo = [];
       state.source = null;
+      cancelAnimationFrame(videoFrame);
       mosaicCache.clear();
       concealments.replaceChildren();
       arrows.replaceChildren();
@@ -175,8 +177,6 @@
       activate.disabled = false;
       activate.setAttribute('aria-expanded', 'false');
       announce('');
-      for (const video of pausedVideos) video.play()?.catch(() => {});
-      pausedVideos = [];
       activate.focus({ preventScroll: true });
       return;
     }
@@ -184,8 +184,6 @@
     activate.disabled = true;
     toolbar.hidden = dock.hidden = false;
     activate.setAttribute('aria-expanded', 'true');
-    pausedVideos = [...document.querySelectorAll('video')].filter(video => !video.paused && !video.ended);
-    pausedVideos.forEach(video => video.pause());
     render();
     try {
       if (!window.PointMosaic) throw new Error('The page capture tool is unavailable.');
@@ -201,6 +199,7 @@
       arrows.setAttribute('width', source.width);
       arrows.setAttribute('height', source.height);
       render();
+      videoFrame = requestAnimationFrame(refreshVideoMosaics);
       announce('');
       toolButtons[tools.findIndex(tool => tool.id === state.tool)].focus({ preventScroll: true });
     } catch (error) {
@@ -209,6 +208,28 @@
       announce('The page could not be captured. Choose “Try annotating” to retry.');
       console.error('Point annotation capture failed', error);
     }
+  }
+
+  function refreshVideoMosaics(time) {
+    if (state.phase === 'idle') return;
+    if (state.phase === 'active' && time - lastVideoRefresh >= 100) {
+      lastVideoRefresh = time;
+      for (const annotation of state.annotations) {
+        if (annotation.tool !== 'blur') continue;
+        const rect = annotation.rect;
+        const frames = (state.source.videos || []).filter(frame =>
+          frame.x < rect.x + rect.width && frame.x + frame.width > rect.x &&
+          frame.y < rect.y + rect.height && frame.y + frame.height > rect.y
+        );
+        const cached = mosaicCache.get(annotation.id);
+        const times = frames.map(frame => frame.video.currentTime).join(',');
+        if (cached && cached.videoTimes !== times) {
+          window.PointMosaic.render(cached.canvas, state.source, rect, annotation.id);
+          cached.videoTimes = times;
+        }
+      }
+    }
+    videoFrame = requestAnimationFrame(refreshVideoMosaics);
   }
 
   function checkpoint(before) {

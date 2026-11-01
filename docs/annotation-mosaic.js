@@ -41,6 +41,7 @@
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
     const canvas = await renderer(root, {
+      foreignObjectRendering: true,
       width,
       height,
       x: 0,
@@ -58,10 +59,29 @@
         // Sampling needs the cloned scroll position to settle before layout is measured.
         clonedDocument.documentElement.style.scrollBehavior = "auto";
         clonedDocument.defaultView.scrollTo(scrollX, scrollY);
+        // Canvas pixels are not serialized into SVG foreignObject images.
+        // html2canvas also clones videos as canvases, so embed their frame pixels.
+        for (const frame of clonedDocument.querySelectorAll('canvas')) {
+          const image = clonedDocument.createElement('img');
+          for (const attribute of frame.attributes) image.setAttribute(attribute.name, attribute.value);
+          image.src = frame.toDataURL();
+          frame.replaceWith(image);
+        }
       },
     });
     canvas.getContext("2d").getImageData(0, 0, 1, 1);
-    return { canvas, scale, width, height };
+    const videos = [...document.querySelectorAll('video')].map((video) => {
+      const bounds = video.getBoundingClientRect();
+      return {
+        video,
+        x: bounds.left + scrollX,
+        y: bounds.top + scrollY,
+        width: bounds.width,
+        height: bounds.height,
+        radius: parseFloat(getComputedStyle(video).borderTopLeftRadius) || 0,
+      };
+    });
+    return { canvas, scale, width, height, videos };
   }
 
   function randomFor(id) {
@@ -175,7 +195,33 @@
     const cropHeight = Math.min(source.canvas.height, originY + targetCanvas.height) - cropY;
     if (cropWidth <= 0 || cropHeight <= 0) return;
 
-    const samples = source.canvas.getContext("2d").getImageData(cropX, cropY, cropWidth, cropHeight).data;
+    let sampleCanvas = source.canvas;
+    let sampleX = cropX;
+    let sampleY = cropY;
+    const videos = (source.videos || []).filter((frame) =>
+      frame.video.readyState >= 2 && frame.x < x + width && frame.x + frame.width > x &&
+      frame.y < y + height && frame.y + frame.height > y &&
+      !frame.video.closest('.is-awaiting-play')
+    );
+    if (videos.length) {
+      sampleCanvas = document.createElement('canvas');
+      sampleCanvas.width = cropWidth;
+      sampleCanvas.height = cropHeight;
+      const sampleContext = sampleCanvas.getContext('2d');
+      sampleContext.drawImage(source.canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+      sampleContext.scale(source.scale, source.scale);
+      sampleContext.translate(-cropX / source.scale, -cropY / source.scale);
+      for (const frame of videos) {
+        sampleContext.save();
+        sampleContext.beginPath();
+        sampleContext.roundRect(frame.x, frame.y, frame.width, frame.height, frame.radius);
+        sampleContext.clip();
+        sampleContext.drawImage(frame.video, frame.x, frame.y, frame.width, frame.height);
+        sampleContext.restore();
+      }
+      sampleX = sampleY = 0;
+    }
+    const samples = sampleCanvas.getContext("2d").getImageData(sampleX, sampleY, cropWidth, cropHeight).data;
     const context = targetCanvas.getContext("2d");
     const output = context.createImageData(cropWidth, cropHeight);
     const columns = Math.max(1, Math.ceil(cropWidth / tileSize));
