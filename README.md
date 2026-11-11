@@ -59,14 +59,16 @@ Drag a selected arrow’s diamond along and away from the arrow to position its 
 `Return` finishes, `Option-Return` inserts a line, and `Command-Return` copies.
 Selected text and captions have direct handles for changing width and font size.
 
-Choose **Settings…** from the Point menu to customize the global shortcut,
-trackpad gesture, annotation and border colors, arrow size, text size, and
-backdrop. Choose **Color mood** from Sunset (peach and violet), Lagoon (mint and
-teal), or Twilight (blue and purple). The wash automatically softens in dark
-mode and stays outside the clear selected region while dragging. Use **Overlay strength** to adjust its
-intensity from 0–100%; the default is 45% and your choice is remembered across
-launches. A crosshair and capture hint indicate readiness immediately, and
-dimensions follow the dragged corner. Reduce Motion skips the entrance fade.
+Choose **Settings…** from the Point menu. Use **Capture** to set the global
+shortcut and trackpad gesture. **Appearance** previews the screenshot background,
+margin, and border. Hover over a color in **Selection overlay** to preview
+Sunset, Lagoon, or Twilight, then click to save it. Use **Strength** to adjust
+the wash from 0–100%. **Annotations** previews the default color, arrow size,
+and text size.
+
+The wash softens in dark mode and stays outside the selected region. A crosshair
+and capture hint indicate readiness, and dimensions follow the dragged corner.
+Reduce Motion skips the entrance fade.
 The screen freezes when capture starts. Selection and the finished screenshot
 use that same frame, so video cannot advance while you choose a region.
 
@@ -108,7 +110,7 @@ the keychain under the `point-notary` profile.
 ```sh
 xcrun notarytool store-credentials "point-notary"
 Scripts/release.sh
-Scripts/publish-release.sh 0.3.0
+Scripts/publish-release.sh 0.4.0
 ```
 
 `release.sh` tests, archives, Developer-ID-signs, notarizes, staples, packages,

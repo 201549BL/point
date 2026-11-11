@@ -1,3 +1,17 @@
+# Point 0.4.0
+
+Point 0.4.0 makes Settings easier to navigate and lets you preview appearance changes before your next capture.
+
+- Find shortcuts, screenshot appearance, and annotation defaults in separate sidebar panes. Point remembers the last pane you opened.
+- See changes to background padding, border color, and annotation style in the preview beside the controls.
+- Hover over the selection overlay options to see the capture wash. Hover over Sunset, Lagoon, or Twilight to try the color, then click to save it.
+- Open Point’s GitHub repository or website from the bottom of the sidebar.
+
+Requires macOS 14 or later. The universal app supports Apple Silicon and Intel Macs.
+
+Unzip `Point-0.4.0-macOS.zip` and move **Point.app** to Applications. Use
+`SHA256SUMS` to verify the download.
+
 # Point 0.2.0
 
 Point 0.2.0 adds curved arrows, screenshot previews, and backgrounds that stay set between captures.

@@ -54,21 +54,22 @@ enum SunsetWashPalette: String, CaseIterable {
 }
 
 enum SunsetWash {
-    static func image(size: CGSize, scale: CGFloat, darkMode: Bool = false) -> CGImage? {
+    static func image(size: CGSize, scale: CGFloat, darkMode: Bool = false, palette: SunsetWashPalette? = nil) -> CGImage? {
         guard size.width > 0, size.height > 0, scale > 0,
               let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: Int(ceil(size.width * scale)), height: Int(ceil(size.height * scale)),
                                       bitsPerComponent: 8, bytesPerRow: 0, space: space,
                                       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         context.scaleBy(x: scale, y: scale)
-        draw(in: context, size: size, darkMode: darkMode)
+        draw(in: context, size: size, darkMode: darkMode, palette: palette)
         return context.makeImage()
     }
 
-    static func draw(in context: CGContext, size: CGSize, opacity: CGFloat = 1, darkMode: Bool = false) {
+    static func draw(in context: CGContext, size: CGSize, opacity: CGFloat = 1, darkMode: Bool = false,
+                     palette: SunsetWashPalette? = nil) {
         let strength = SunsetWashStrength.preferred()
         let alphas: [CGFloat] = [156/255, 161/255, 176/255]
-        let colors = zip(SunsetWashPalette.preferred().colors, alphas).map { color, alpha in
+        let colors = zip((palette ?? SunsetWashPalette.preferred()).colors, alphas).map { color, alpha in
             color.withAlphaComponent(alpha * strength).cgColor
         }
         guard let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),

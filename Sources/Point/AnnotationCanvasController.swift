@@ -24,22 +24,9 @@ final class AnnotationCanvasController: NSObject {
     private var controlsPanel: NSPanel?
     private var controlsView: AnnotationControlsView?
     private var backdropAnimationTimer: Timer?
-    private var backdropTransition: BackdropTransition?
+    private var backdropTransition: CaptureBackdropTransition?
     private var controlsDetachedForTransition = false
     private var isPresentingSaveDialog = false
-
-    private struct BackdropTransition {
-        let startTime: TimeInterval
-        let duration: TimeInterval
-        let startPanelFrame: CGRect
-        let endPanelFrame: CGRect
-        let startOpacity: CGFloat
-        let endOpacity: CGFloat
-        let startRevealPadding: CGFloat
-        let endRevealPadding: CGFloat
-        let isEnabling: Bool
-        let canvasScreenOrigin: CGPoint
-    }
 
     init(sourceImage: CGImage, wallpaperImage: CGImage?, canvasFrame: CGRect) {
         self.sourceImage = sourceImage
@@ -350,9 +337,8 @@ final class AnnotationCanvasController: NSObject {
         frameView.wallpaperReferencePadding = appearance.backdropMargin
         frameView.update(wallpaperImage: wallpaperImage, padding: frameView.padding)
         if isEnabling, frameView.wallpaperOpacity <= 0 { frameView.wallpaperOpacity = 0 }
-        backdropTransition = BackdropTransition(
+        backdropTransition = CaptureBackdropTransition(
             startTime: ProcessInfo.processInfo.systemUptime,
-            duration: isEnabling ? 0.30 : 0.36,
             startPanelFrame: panel.frame,
             endPanelFrame: panelFrame,
             startOpacity: frameView.wallpaperOpacity,
@@ -384,36 +370,15 @@ final class AnnotationCanvasController: NSObject {
             timer.invalidate()
             return
         }
-        let elapsed = ProcessInfo.processInfo.systemUptime - transition.startTime
-        let linearProgress = min(1, max(0, elapsed / transition.duration))
-        let geometryProgress = BackdropMotionCurve.geometry(
-            at: linearProgress,
-            isEnabling: transition.isEnabling
-        )
-        let opacityProgress = BackdropMotionCurve.opacity(
-            at: linearProgress,
-            isEnabling: transition.isEnabling
-        )
-        let panelFrame = interpolate(transition.startPanelFrame, transition.endPanelFrame, geometryProgress)
-        let opacity = interpolate(transition.startOpacity, transition.endOpacity, opacityProgress)
-        let revealPadding = interpolate(
-            transition.startRevealPadding,
-            transition.endRevealPadding,
-            geometryProgress
-        )
-
-        panel.setFrame(panelFrame, display: true)
-        let actualPanelFrame = panel.frame
-        let anchoredCanvasOrigin = CGPoint(
-            x: transition.canvasScreenOrigin.x - actualPanelFrame.minX,
-            y: transition.canvasScreenOrigin.y - actualPanelFrame.minY
-        )
+        let sample = transition.sample(at: ProcessInfo.processInfo.systemUptime)
+        panel.setFrame(sample.panelFrame, display: true)
+        let anchoredCanvasOrigin = transition.canvasOrigin(in: panel.frame)
         frameView.update(wallpaperImage: wallpaperImage, canvasOrigin: anchoredCanvasOrigin)
-        frameView.wallpaperOpacity = opacity
-        frameView.wallpaperRevealPadding = revealPadding
+        frameView.wallpaperOpacity = sample.opacity
+        frameView.wallpaperRevealPadding = sample.revealPadding
         canvasView.frame = frameView.canvasRect
 
-        guard linearProgress >= 1 else { return }
+        guard sample.isComplete else { return }
         timer.invalidate()
         backdropAnimationTimer = nil
         backdropTransition = nil
@@ -423,19 +388,6 @@ final class AnnotationCanvasController: NSObject {
         panel.invalidateCursorRects(for: frameView)
         reattachControlsIfNeeded()
         positionControls()
-    }
-
-    private func interpolate(_ start: CGFloat, _ end: CGFloat, _ progress: CGFloat) -> CGFloat {
-        start + (end - start) * progress
-    }
-
-    private func interpolate(_ start: CGRect, _ end: CGRect, _ progress: CGFloat) -> CGRect {
-        CGRect(
-            x: interpolate(start.origin.x, end.origin.x, progress),
-            y: interpolate(start.origin.y, end.origin.y, progress),
-            width: interpolate(start.width, end.width, progress),
-            height: interpolate(start.height, end.height, progress)
-        )
     }
 
     private func positionControls() {
@@ -457,7 +409,7 @@ final class AnnotationCanvasController: NSObject {
         let targetOrigin = backingAligned(rawOrigin, for: controlsPanel)
         let targetFrame = CGRect(origin: targetOrigin, size: controlsPanel.frame.size)
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = isEnabling ? 0.30 : 0.36
+            context.duration = CaptureBackdropTransition.duration(isEnabling: isEnabling)
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1.12, 0.28, 1)
             controlsPanel.animator().setFrame(targetFrame, display: true)
         }
@@ -522,6 +474,56 @@ final class AnnotationCanvasController: NSObject {
 final class AnnotationPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+}
+
+/// The capture editor and Settings preview share the exact backdrop spring and reveal timing.
+struct CaptureBackdropTransition {
+    struct Sample {
+        let panelFrame: CGRect
+        let opacity: CGFloat
+        let revealPadding: CGFloat
+        let isComplete: Bool
+    }
+
+    let startTime: TimeInterval
+    let startPanelFrame: CGRect
+    let endPanelFrame: CGRect
+    let startOpacity: CGFloat
+    let endOpacity: CGFloat
+    let startRevealPadding: CGFloat
+    let endRevealPadding: CGFloat
+    let isEnabling: Bool
+    let canvasScreenOrigin: CGPoint
+
+    var duration: TimeInterval { Self.duration(isEnabling: isEnabling) }
+
+    static func duration(isEnabling: Bool) -> TimeInterval { isEnabling ? 0.30 : 0.36 }
+
+    func sample(at time: TimeInterval) -> Sample {
+        let progress = min(1, max(0, (time - startTime) / duration))
+        let geometry = BackdropMotionCurve.geometry(at: progress, isEnabling: isEnabling)
+        let opacity = BackdropMotionCurve.opacity(at: progress, isEnabling: isEnabling)
+        return Sample(
+            panelFrame: CGRect(
+                x: interpolate(startPanelFrame.minX, endPanelFrame.minX, geometry),
+                y: interpolate(startPanelFrame.minY, endPanelFrame.minY, geometry),
+                width: interpolate(startPanelFrame.width, endPanelFrame.width, geometry),
+                height: interpolate(startPanelFrame.height, endPanelFrame.height, geometry)
+            ),
+            opacity: interpolate(startOpacity, endOpacity, opacity),
+            revealPadding: interpolate(startRevealPadding, endRevealPadding, geometry),
+            isComplete: progress >= 1
+        )
+    }
+
+    /// Use the actual window frame after AppKit has aligned it to backing pixels.
+    func canvasOrigin(in panelFrame: CGRect) -> CGPoint {
+        CGPoint(x: canvasScreenOrigin.x - panelFrame.minX, y: canvasScreenOrigin.y - panelFrame.minY)
+    }
+
+    private func interpolate(_ start: CGFloat, _ end: CGFloat, _ progress: CGFloat) -> CGFloat {
+        start + (end - start) * progress
+    }
 }
 
 enum BackdropMotionCurve {
