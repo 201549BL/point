@@ -82,29 +82,47 @@ final class SelectionView: NSView {
     private let washImage: CGImage?
     private let darkMode: Bool
     private let animatesEntrance: Bool
+    private let isPreview: Bool
+    private let previewPalette: SunsetWashPalette?
     private var entranceAnimation: SelectionEntranceAnimation?
     private var entranceProgress: CGFloat
     private var isSelecting = false
     private let accentColor = NSColor.white
 
-    init(snapshot: DisplaySnapshot, animatesEntrance: Bool = true) {
+    init(snapshot: DisplaySnapshot, animatesEntrance: Bool = true, previewSelection: CGRect? = nil,
+         previewPalette: SunsetWashPalette? = nil) {
         self.snapshot = snapshot
         frozenImage = NSImage(cgImage: snapshot.image, size: snapshot.screenFrame.size)
         self.animatesEntrance = animatesEntrance
-        entranceProgress = animatesEntrance && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 1
+        self.previewPalette = previewPalette
+        isPreview = previewSelection != nil
+        entranceProgress = !isPreview && animatesEntrance && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 1
+        if let previewSelection {
+            let rect = previewSelection.standardized.intersection(CGRect(origin: .zero, size: snapshot.screenFrame.size))
+            if !rect.isNull, !rect.isEmpty {
+                selection = rect
+                dragCurrent = CGPoint(x: rect.maxX, y: rect.minY)
+            }
+            isSelecting = true
+        }
         darkMode = NSApplication.shared.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        washImage = SunsetWash.image(size: snapshot.screenFrame.size, scale: snapshot.pointPixelScale, darkMode: darkMode)
+        washImage = SunsetWash.image(size: snapshot.screenFrame.size, scale: snapshot.pointPixelScale,
+                                     darkMode: darkMode, palette: previewPalette)
         super.init(frame: CGRect(origin: .zero, size: snapshot.screenFrame.size))
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    override var acceptsFirstResponder: Bool { true }
+    override var acceptsFirstResponder: Bool { !isPreview }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        isPreview ? nil : super.hitTest(point)
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        window?.makeFirstResponder(self)
+        if !isPreview { window?.makeFirstResponder(self) }
         if window == nil {
             entranceAnimation?.stop()
             entranceAnimation = nil
@@ -112,6 +130,7 @@ final class SelectionView: NSView {
     }
 
     func beginEntrance() {
+        guard !isPreview else { return }
         entranceAnimation?.stop()
         entranceAnimation = nil
         isSelecting = false
@@ -131,6 +150,7 @@ final class SelectionView: NSView {
     }
 
     func beginSelection() {
+        guard !isPreview else { return }
         entranceAnimation?.stop()
         entranceAnimation = nil
         entranceProgress = 1
@@ -139,12 +159,13 @@ final class SelectionView: NSView {
     }
 
     func resetSelection() {
+        guard !isPreview else { return }
         isSelecting = false
         needsDisplay = true
     }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .crosshair)
+        if !isPreview { addCursorRect(bounds, cursor: .crosshair) }
     }
 
     private func drawCaptureHint() {
@@ -160,6 +181,7 @@ final class SelectionView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        guard !isPreview else { return }
         dragStart = convert(event.locationInWindow, from: nil)
         dragCurrent = dragStart
         selection = nil
@@ -168,6 +190,7 @@ final class SelectionView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        guard !isPreview else { return }
         guard let dragStart else { return }
         let current = convert(event.locationInWindow, from: nil)
         dragCurrent = current
@@ -181,6 +204,7 @@ final class SelectionView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        guard !isPreview else { return }
         defer { dragStart = nil }
         guard let selection, selection.width >= 2, selection.height >= 2 else {
             self.selection = nil
@@ -192,6 +216,7 @@ final class SelectionView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
+        guard !isPreview else { return }
         if event.keyCode == 53 {
             onCancel?()
         } else {
@@ -214,7 +239,7 @@ final class SelectionView: NSView {
             NSImage(cgImage: washImage, size: bounds.size).draw(in: bounds)
         } else if let context = NSGraphicsContext.current?.cgContext {
             let p = entranceProgress * entranceProgress * (3 - 2 * entranceProgress)
-            SunsetWash.draw(in: context, size: bounds.size, opacity: p, darkMode: darkMode)
+            SunsetWash.draw(in: context, size: bounds.size, opacity: p, darkMode: darkMode, palette: previewPalette)
         }
         NSGraphicsContext.restoreGraphicsState()
         guard let selection else {
