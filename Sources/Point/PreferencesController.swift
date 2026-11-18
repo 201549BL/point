@@ -1,9 +1,19 @@
 import AppKit
 
+enum MenuBarItemPreference {
+    static let defaultsKey = "showsMenuBarItem"
+
+    static var isVisible: Bool {
+        get { UserDefaults.standard.object(forKey: defaultsKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: defaultsKey) }
+    }
+}
+
 @MainActor
 final class PreferencesController: NSObject, NSWindowDelegate {
     var onShortcutChange: ((ShortcutChoice) -> Bool)?
     var onTrackpadShortcutChange: ((Bool) -> Void)?
+    var onMenuBarItemVisibilityChange: ((Bool) -> Void)?
     var onStyleChange: ((AnnotationStyle) -> Void)?
     var onBorderColorChange: ((NSColor) -> Void)?
 
@@ -16,6 +26,7 @@ final class PreferencesController: NSObject, NSWindowDelegate {
     private var hoveredPalette: SunsetWashPalette?
     private let shortcutPopup = NSPopUpButton()
     private let trackpadSwitch = NSSwitch()
+    private let menuBarItemSwitch = NSSwitch()
     private let colorWell = NSColorWell()
     private let borderColorWell = NSColorWell()
     private let widthSlider = NSSlider(value: 4, minValue: 2, maxValue: 12, target: nil, action: nil)
@@ -125,6 +136,7 @@ final class PreferencesController: NSObject, NSWindowDelegate {
         for choice in ShortcutChoice.allCases { shortcutPopup.addItem(withTitle: choice.title) }
         configure(shortcutPopup, id: "shortcut", label: "Capture shortcut", action: #selector(shortcutChanged))
         configure(trackpadSwitch, id: "trackpad", label: "Three-finger double-tap to capture", action: #selector(trackpadShortcutChanged))
+        configure(menuBarItemSwitch, id: "menuBarItem", label: "Show menu bar item", action: #selector(menuBarItemVisibilityChanged))
         configure(colorWell, id: "annotationColor", label: "Annotation color", action: #selector(styleChanged))
         configure(borderColorWell, id: "borderColor", label: "Glass border color", action: #selector(borderColorChanged))
         configure(widthSlider, id: "arrowSize", label: "Default arrow size", action: #selector(styleChanged))
@@ -163,6 +175,7 @@ final class PreferencesController: NSObject, NSWindowDelegate {
     private func synchronizeControls() {
         shortcutPopup.selectItem(at: ShortcutChoice.preferred.rawValue)
         trackpadSwitch.state = TrackpadShortcutPreference.isEnabled ? .on : .off
+        menuBarItemSwitch.state = MenuBarItemPreference.isVisible ? .on : .off
         let style = AnnotationStyle.preferred
         colorWell.color = style.color
         widthSlider.doubleValue = style.lineWidth
@@ -184,27 +197,33 @@ final class PreferencesController: NSObject, NSWindowDelegate {
         heading.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(heading)
 
-        let controls: NSView
+        var contents: [NSView]
         switch pane {
         case .capture:
-            controls = section("Shortcuts", rows: [
-                settingRow("Keyboard shortcut", control: shortcutPopup),
-                settingRow("Three-finger double-tap", control: trackpadSwitch),
-            ])
+            contents = [
+                section("Shortcuts", rows: [
+                    settingRow("Keyboard shortcut", control: shortcutPopup),
+                    settingRow("Three-finger double-tap", control: trackpadSwitch),
+                ]),
+                stack([
+                    section("Menu Bar", rows: [settingRow("Show menu bar item", control: menuBarItemSwitch)]),
+                    text("When the item is hidden, open Point again from Finder to return to Settings.",
+                         size: 12, color: .secondaryLabelColor),
+                ], spacing: 8),
+            ]
         case .appearance:
-            controls = section("Screenshot", rows: [
+            contents = [section("Screenshot", rows: [
                 settingRow("Include background", control: backdropSwitch, height: 40),
                 sliderRow("Margin", slider: backdropMarginSlider, value: backdropMarginValue, height: 40),
                 settingRow("Border color", control: borderColorWell, height: 40),
-            ])
+            ])]
         case .annotations:
-            controls = section("Defaults", rows: [
+            contents = [section("Defaults", rows: [
                 settingRow("Color", control: colorWell),
                 sliderRow("Arrow size", slider: widthSlider, value: widthValue),
                 sliderRow("Text size", slider: fontSlider, value: fontValue),
-            ])
+            ])]
         }
-        var contents = [controls]
         var preview: SettingsPreviewView?
         if pane != .capture {
             let kind: SettingsPreviewView.Kind = pane == .appearance ? .appearance : .annotations
@@ -480,6 +499,12 @@ final class PreferencesController: NSObject, NSWindowDelegate {
         let enabled = trackpadSwitch.state == .on
         UserDefaults.standard.set(enabled, forKey: TrackpadShortcutPreference.defaultsKey)
         onTrackpadShortcutChange?(enabled)
+    }
+
+    @objc private func menuBarItemVisibilityChanged() {
+        let isVisible = menuBarItemSwitch.state == .on
+        MenuBarItemPreference.isVisible = isVisible
+        onMenuBarItemVisibilityChange?(isVisible)
     }
 
     @objc private func styleChanged() {

@@ -194,25 +194,24 @@ final class OnboardingTests: XCTestCase {
             let directory = URL(fileURLWithPath: destination, isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let view = try XCTUnwrap(window.contentView)
-            for (name, page) in [("welcome", OnboardingModel.Page.welcome), ("permission", .permission), ("settings", .settings), ("restart", .restart), ("ready", .ready)] {
-                controller.model.page = page
-                RunLoop.main.run(until: Date().addingTimeInterval(0.08))
-                view.layoutSubtreeIfNeeded()
-                let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-                view.cacheDisplay(in: view.bounds, to: bitmap)
-                let png = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                try png.write(to: directory.appendingPathComponent("\(name).png"))
-            }
-            controller.model.page = .settings
-            controller.model.message = "macOS hasn’t enabled capture yet. Respond to any macOS prompt, then check again. If Point is already enabled in Settings, quit and reopen it."
-            for (name, appearance) in [("settings-error", NSAppearance.Name.aqua), ("settings-dark", .darkAqua)] {
+            let pages: [(String, OnboardingModel.Page)] = [
+                ("welcome", .welcome), ("permission", .permission), ("settings", .settings),
+                ("restart", .restart), ("ready", .ready),
+            ]
+            let error = "macOS hasn’t enabled capture yet. Respond to any macOS prompt, then check again. If Point is already enabled in Settings, quit and reopen it."
+            for (theme, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
                 window.appearance = NSAppearance(named: appearance)
-                RunLoop.main.run(until: Date().addingTimeInterval(0.08))
-                view.layoutSubtreeIfNeeded()
-                let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-                view.cacheDisplay(in: view.bounds, to: bitmap)
-                try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
-                    .write(to: directory.appendingPathComponent("\(name).png"))
+                for (name, page) in pages + [("settings-error", .settings)] {
+                    controller.model.page = page
+                    controller.model.message = name == "settings-error" ? error : nil
+                    // Wait for the SwiftUI page transition before caching pixels.
+                    RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+                    view.layoutSubtreeIfNeeded()
+                    let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+                    view.cacheDisplay(in: view.bounds, to: bitmap)
+                    try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                        .write(to: directory.appendingPathComponent("\(name)-\(theme).png"))
+                }
             }
         }
     }

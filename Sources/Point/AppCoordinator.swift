@@ -28,6 +28,7 @@ final class AppCoordinator {
     private lazy var setupItem = NSMenuItem(title: "Finish Setup…", action: #selector(showSetup), keyEquivalent: "")
 
     func start() {
+        statusItem.isVisible = MenuBarItemPreference.isVisible
         showNormalStatusIcon()
 
         let menu = NSMenu()
@@ -54,6 +55,9 @@ final class AppCoordinator {
         let quitItem = NSMenuItem(title: "Quit Point", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
         statusItem.menu = menu
+        preferencesController.onMenuBarItemVisibilityChange = { [weak self] isVisible in
+            self?.statusItem.isVisible = isVisible
+        }
 
         do {
             try shortcutService.register(choice: .preferred) { [weak self] in
@@ -61,13 +65,14 @@ final class AppCoordinator {
             }
         } catch {
             captureItem.title = "Capture Region (shortcut unavailable)"
+            let nextStep = statusItem.isVisible
+                ? "You can capture from the Point menu or choose another shortcut in Settings."
+                : "Open Point again from Finder to choose another shortcut in Settings."
+            let message = "\(ShortcutChoice.preferred.title) is in use by another app. \(nextStep)"
             if onboardingProgress.isComplete {
-                showError(
-                    title: "Shortcut unavailable",
-                    message: "\(ShortcutChoice.preferred.title) is already registered by another app. You can still capture from the Point menu."
-                )
+                showError(title: "Shortcut unavailable", message: message)
             } else {
-                onboarding.model.message = "\(ShortcutChoice.preferred.title) is in use by another app. You can capture from the Point menu or choose another shortcut in Settings."
+                onboarding.model.message = message
             }
         }
         trackpadShortcutService.setEnabled(TrackpadShortcutPreference.isEnabled) { [weak self] in
@@ -107,6 +112,12 @@ final class AppCoordinator {
         if !onboardingProgress.isComplete {
             showSetup()
         }
+    }
+
+    func handleReopen() -> Bool {
+        guard !statusItem.isVisible else { return true }
+        showSettings()
+        return false
     }
 
     @objc private func showSetup() {
@@ -184,10 +195,12 @@ final class AppCoordinator {
             isOnboardingCapture = false
             setupItem.isHidden = false
             // Update behind the macOS authorization sheet without activating a
-            // Point modal. The user can explicitly resume from the menu bar.
+            // Point modal. Let the user explicitly resume setup after responding.
             onboardingProgress.advance(to: .screenAccess)
             onboarding.model.page = .settings
-            onboarding.model.message = "Respond to the macOS permission prompt, then choose Finish Setup from the Point menu."
+            onboarding.model.message = statusItem.isVisible
+                ? "Respond to the macOS permission prompt, then choose Finish Setup from the Point menu."
+                : "Respond to the macOS permission prompt, then use your capture shortcut to resume setup."
             return
         }
         if isOnboardingCapture {
