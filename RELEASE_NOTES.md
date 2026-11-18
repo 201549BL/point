@@ -1,3 +1,15 @@
+# Point 0.5.0
+
+Point 0.5.0 lets you hide the menu bar icon and gives first-time setup a new look.
+
+- Open **Settings → Capture → Show menu bar item** to show or hide the icon immediately. Point remembers your choice across launches. If the icon is hidden, open Point again from Finder to return to Settings.
+- Get started with a redesigned welcome screen and clearer Screen Recording instructions. See your keyboard shortcut, when available, before trying an optional practice capture.
+
+Requires macOS 14 or later. The universal app supports Apple Silicon and Intel Macs.
+
+Unzip `Point-0.5.0-macOS.zip` and move **Point.app** to Applications. Use
+`SHA256SUMS` to verify the download.
+
 # Point 0.4.0
 
 Point 0.4.0 makes Settings easier to navigate and lets you preview appearance changes before your next capture.

@@ -4,7 +4,7 @@ import XCTest
 
 final class PreferencesTests: XCTestCase {
     private let preferenceKeys = [
-        "settingsSelectedPane", "shortcutChoice", TrackpadShortcutPreference.defaultsKey,
+        "settingsSelectedPane", "shortcutChoice", TrackpadShortcutPreference.defaultsKey, MenuBarItemPreference.defaultsKey,
         SunsetWashPalette.defaultsKey, SunsetWashStrength.defaultsKey,
         "annotationColorRed", "annotationColorGreen", "annotationColorBlue",
         "annotationLineWidth", "annotationFontSize", "borderColorRed", "borderColorGreen",
@@ -206,6 +206,36 @@ final class PreferencesTests: XCTestCase {
     }
 
     @MainActor
+    func testMenuBarItemDefaultsToVisibleAndRemembersChanges() throws {
+        try withSettings { controller, window, content in
+            let capture = try control(NSView.self, "settings.content.capture", in: content)
+            let toggle = try control(NSSwitch.self, "settings.menuBarItem", in: capture)
+            XCTAssertEqual(toggle.state, .on)
+
+            var visibilityChanges: [Bool] = []
+            controller.onMenuBarItemVisibilityChange = { visibilityChanges.append($0) }
+            toggle.state = .off
+            try sendAction(toggle)
+            XCTAssertFalse(MenuBarItemPreference.isVisible)
+
+            window.close()
+            let reopenedController = PreferencesController()
+            reopenedController.onMenuBarItemVisibilityChange = { visibilityChanges.append($0) }
+            reopenedController.show()
+            let reopenedWindow = try settingsWindow()
+            defer { reopenedWindow.close() }
+            let reopenedContent = try XCTUnwrap(reopenedWindow.contentView)
+            let reopenedToggle = try control(NSSwitch.self, "settings.menuBarItem", in: reopenedContent)
+            XCTAssertEqual(reopenedToggle.state, .off)
+
+            reopenedToggle.state = .on
+            try sendAction(reopenedToggle)
+            XCTAssertTrue(MenuBarItemPreference.isVisible)
+            XCTAssertEqual(visibilityChanges, [false, true])
+        }
+    }
+
+    @MainActor
     func testAnnotationDefaultsUpdateValuesPreferencesAndEditorCallback() throws {
         try withSettings { controller, _, content in
             try sendAction(control(NSButton.self, "settings.pane.annotations", in: content))
@@ -338,7 +368,7 @@ final class PreferencesTests: XCTestCase {
                     let selected = try control(NSView.self, "settings.content.\(pane)", in: content)
                     let sectionTitles: [String]
                     switch pane {
-                    case "capture": sectionTitles = ["Shortcuts"]
+                    case "capture": sectionTitles = ["Shortcuts", "Menu Bar"]
                     case "appearance": sectionTitles = ["Screenshot", "Selection overlay"]
                     default: sectionTitles = ["Defaults"]
                     }

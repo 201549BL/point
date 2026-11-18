@@ -23,6 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         coordinator?.start()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        coordinator?.handleReopen() ?? true
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         return .terminateNow
     }
